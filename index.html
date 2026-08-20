@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>별별 작명소 — 엄마 아빠 이름으로 짓는 아이 이름</title>
+<meta name="description" content="엄마 아빠 이름의 한자 뜻을 이어받아 아이 이름을 지어 드립니다. 성별 · 자수 · 꼭 넣고 싶은 글자까지 골라 보세요. 별마마파파의 두 번째 서비스." />
+<meta name="theme-color" content="#05060c" />
+<link rel="icon" href="assets/logo.png" type="image/png" />
+<link rel="apple-touch-icon" href="assets/logo.png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="별별 작명소" />
+<meta property="og:title" content="별별 작명소 — 엄마 아빠 이름으로 짓는 아이 이름" />
+<meta property="og:description" content="엄마 아빠 이름의 한자 뜻을 이어받아 아이 이름을 지어 드립니다." />
+<meta property="og:image" content="https://eunjinpark98.github.io/star-naming/assets/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:url" content="https://eunjinpark98.github.io/star-naming/" />
+<meta property="og:locale" content="ko_KR" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://eunjinpark98.github.io/star-naming/assets/og-image.png" />
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="glow" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="nav__brand" href="./">
+    <img src="assets/logo.png" alt="" width="32" height="32" />
+    <span>별별 작명소</span>
+  </a>
+  <span class="nav__by">by 별마마파파</span>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <div class="hero__logo">
+      <img src="assets/logo.png" alt="별별 작명소 로고" width="120" height="120" />
+    </div>
+    <h1 class="hero__title">별별 작명소</h1>
+    <div class="rule" aria-hidden="true">
+      <span class="rule__line"></span><span class="rule__star">✦</span><span class="rule__line"></span>
+    </div>
+    <p class="hero__sub">
+      엄마 아빠 이름에 담긴 뜻을 이어받아<br class="br-m" />
+      아이의 이름을 지어 드릴게요
+    </p>
+  </section>
+
+  <form id="form" class="card" autocomplete="off">
+
+    <!-- 1. 부모 이름 -->
+    <section class="step">
+      <h2 class="step__title"><span class="step__no">1</span> 엄마 아빠 이름</h2>
+      <p class="step__hint">아이의 성(姓)은 아빠 이름의 성을 따릅니다.</p>
+
+      <div class="grid2">
+        <label class="field">
+          <span class="field__label">아빠 이름</span>
+          <input type="text" id="dadName" placeholder="예) 박준호" maxlength="6" />
+        </label>
+        <label class="field">
+          <span class="field__label">엄마 이름</span>
+          <input type="text" id="momName" placeholder="예) 김은진" maxlength="6" />
+        </label>
+      </div>
+
+      <div id="hanjaPick" class="hanja-pick" hidden>
+        <p class="step__hint">두 분 이름 글자의 한자 뜻을 골라 주세요. 아이 이름에 그 뜻을 이어 담습니다.</p>
+        <div id="hanjaRows" class="hanja-rows"></div>
+      </div>
+    </section>
+
+    <!-- 2. 유사도 -->
+    <section class="step">
+      <h2 class="step__title"><span class="step__no">2</span> 부모 이름과 얼마나 닮게 할까요?</h2>
+      <input type="range" id="simil" min="0" max="100" step="25" value="50" />
+      <div class="simil">
+        <output id="similPct" class="simil__pct">50%</output>
+        <p id="similDesc" class="simil__desc">부모님 이름에서 한 글자를 그대로 가져옵니다.</p>
+      </div>
+    </section>
+
+    <!-- 3. 표기 -->
+    <section class="step">
+      <h2 class="step__title"><span class="step__no">3</span> 이름 표기</h2>
+      <div class="opts" role="radiogroup" aria-label="이름 표기">
+        <label class="opt"><input type="radio" name="script" value="hanja" checked /><span>한자 이름<em>뜻풀이까지</em></span></label>
+        <label class="opt"><input type="radio" name="script" value="hangul" /><span>한글 이름<em>소리만</em></span></label>
+      </div>
+    </section>
+
+    <!-- 4. 성별 -->
+    <section class="step">
+      <h2 class="step__title"><span class="step__no">4</span> 성별</h2>
+      <div class="opts opts--3" role="radiogroup" aria-label="성별">
+        <label class="opt"><input type="radio" name="gender" value="M" /><span>남아</span></label>
+        <label class="opt"><input type="radio" name="gender" value="F" /><span>여아</span></label>
+        <label class="opt"><input type="radio" name="gender" value="N" checked /><span>상관없음</span></label>
+      </div>
+    </section>
+
+    <!-- 5. 자수 -->
+    <section class="step">
+      <h2 class="step__title"><span class="step__no">5</span> 이름 자수</h2>
+      <p class="step__hint">성을 뺀 이름의 글자 수입니다.</p>
+      <div class="opts" role="radiogroup" aria-label="이름 자수">
+        <label class="opt"><input type="radio" name="len" value="2" checked /><span>두 글자<em>예) 은진</em></span></label>
+        <label class="opt"><input type="radio" name="len" value="3" /><span>세 글자<em>예) 은지호</em></span></label>
+      </div>
+    </section>
+
+    <!-- 6. 조건 -->
+    <section class="step">
+      <h2 class="step__title"><span class="step__no">6</span> 꼭 넣고 싶은 것 <span class="tag-opt">선택</span></h2>
+      <p class="step__hint">글자와 초성 중 하나만 고를 수 있어요.</p>
+
+      <div class="opts" role="radiogroup" aria-label="조건 종류">
+        <label class="opt"><input type="radio" name="must" value="none" checked /><span>없어요</span></label>
+        <label class="opt"><input type="radio" name="must" value="char" /><span>글자 지정</span></label>
+        <label class="opt"><input type="radio" name="must" value="cho" /><span>초성 지정</span></label>
+      </div>
+
+      <div id="mustChar" class="must-box" hidden>
+        <label class="field">
+          <span class="field__label">꼭 들어갈 한 글자</span>
+          <input type="text" id="mustCharInput" placeholder="예) 은" maxlength="1" />
+        </label>
+      </div>
+
+      <div id="mustCho" class="must-box" hidden>
+        <div class="grid2">
+          <label class="field">
+            <span class="field__label">첫 글자 초성</span>
+            <select id="cho1"></select>
+          </label>
+          <label class="field">
+            <span class="field__label">둘째 글자 초성</span>
+            <select id="cho2"></select>
+          </label>
+        </div>
+        <p class="step__hint">둘 다 고르지 않아도 됩니다. 고른 것만 맞춰 드려요.</p>
+      </div>
+    </section>
+
+    <p id="formError" class="form-error" hidden></p>
+
+    <button type="submit" class="btn btn--gold btn--big">
+      <span>✦ 이름 지으러 가기</span>
+    </button>
+  </form>
+
+  <p class="foot-note">
+    지어 드린 이름은 참고용이에요. 출생신고 전에 <a href="https://efamily.scourt.go.kr" target="_blank" rel="noopener">인명용 한자</a> 여부를 꼭 확인해 주세요.
+  </p>
+
+</main>
+
+<footer class="footer">
+  <img src="assets/logo.png" alt="" width="34" height="34" />
+  <p class="footer__brand">별마마파파</p>
+  <p class="footer__copy">© <span id="year">2026</span> byeolmamapapa</p>
+</footer>
+
+<!-- ── 별을 모으는 중 ────────────────────────────── -->
+<div id="loading" class="loading" hidden aria-live="polite">
+  <div class="orbit" aria-hidden="true">
+    <span class="orbit__core">✦</span>
+    <span class="orbit__ring orbit__ring--1"><i>✧</i></span>
+    <span class="orbit__ring orbit__ring--2"><i>★</i></span>
+    <span class="orbit__ring orbit__ring--3"><i>✦</i></span>
+  </div>
+  <p id="loadingText" class="loading__text">밤하늘에서 별을 모으는 중</p>
+</div>
+
+<!-- ── 짜잔 ─────────────────────────────────────── -->
+<div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modalName">
+  <div class="modal__dim" data-close></div>
+  <div class="modal__box">
+    <button type="button" class="modal__x" data-close aria-label="닫기">✕</button>
+
+    <p class="modal__tada">짜잔! 이 이름은 어떠세요?</p>
+
+    <div class="modal__starburst" aria-hidden="true">
+      <span>✦</span><span>✧</span><span>★</span><span>✦</span><span>✧</span>
+    </div>
+
+    <p id="modalHanja" class="modal__hanja"></p>
+    <h2 id="modalName" class="modal__name"></h2>
+    <p id="modalMeaning" class="modal__meaning"></p>
+
+    <div id="modalDetail" class="modal__detail"></div>
+
+    <div class="modal__actions">
+      <button type="button" id="againBtn" class="btn btn--ghost">
+        <span>↻ 다시 정하기</span>
+      </button>
+      <button type="button" id="shareBtn" class="btn btn--kakao">
+        <span>카톡 공유하기</span>
+      </button>
+    </div>
+
+    <p id="modalNote" class="modal__note"></p>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
