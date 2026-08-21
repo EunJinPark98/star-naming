@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://eunjinpark98.github.io/star-naming/sitemap.xml

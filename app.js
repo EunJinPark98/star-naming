@@ -429,8 +429,20 @@
       : h[0].j + " " + h[1].j + " " + last.a + " 아이";
   }
 
+  /** 글자마다 "보배 진 珍" 처럼 뜻 · 음 · 한자를 늘어놓는다. */
   function readingOf(slots) {
-    return slots.map((s) => s.hanja.m + " " + s.syl).join(", ");
+    return slots
+      .map(
+        (s) =>
+          '<span class="ch">' +
+          s.hanja.m +
+          " " +
+          s.syl +
+          ' <i>' +
+          s.hanja.c +
+          "</i></span>"
+      )
+      .join("");
   }
 
   /* ── 화면에 보여주기 ──────────────────────── */
@@ -471,30 +483,20 @@
   function openModal(result, opts) {
     current = { result, opts };
     const hanjaEl = $("modalHanja");
+    const charsEl = $("modalChars");
     const meaningEl = $("modalMeaning");
-    const detailEl = $("modalDetail");
 
     if (opts.script === "hanja") {
-      hanjaEl.textContent = opts.surHanja
-        ? opts.surHanja + result.slots.map((s) => s.hanja.c).join("")
-        : result.slots.map((s) => s.hanja.c).join("");
+      hanjaEl.textContent = result.slots.map((s) => s.hanja.c).join("");
+      charsEl.innerHTML = readingOf(result.slots);
       meaningEl.textContent = meaningOf(result.slots);
     } else {
       hanjaEl.textContent = "";
+      charsEl.innerHTML = "";
       meaningEl.textContent = "";
     }
 
     $("modalName").textContent = result.full;
-
-    /* 이름과 뜻만 보여 준다. 고른 조건은 뒤에 그대로 남아 있으니 되풀이하지 않는다. */
-    const rows = [];
-    if (opts.script === "hanja") {
-      rows.push(["글자 뜻", readingOf(result.slots)]);
-    }
-
-    detailEl.innerHTML = rows
-      .map((r) => '<div class="dl"><span class="dl__k">' + r[0] + '</span><span class="dl__v">' + r[1] + "</span></div>")
-      .join("");
 
     $("modalNote").textContent = "";
     $("againBtn").disabled = false;
