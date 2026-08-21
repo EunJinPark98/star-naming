@@ -62,7 +62,8 @@ assets/      로고
 공유됩니다. 비워 두면 기기의 공유 기능이나 링크 복사로 대신합니다.
 
 키를 넣을 때는 [카카오 개발자센터](https://developers.kakao.com)에서
-**플랫폼 → Web → 사이트 도메인**에 배포 주소를 등록해야 합니다.
+**앱 → 제품 링크 관리 → 웹 도메인**에 배포 주소를 등록해야 합니다.
+등록되지 않은 도메인의 링크는 카카오가 그대로 보내지 않습니다.
 
 ## 로컬에서 보기
 
@@ -75,6 +76,30 @@ python3 -m http.server 8000
 
 저장소 **Settings → Pages → Source**를 `GitHub Actions`로 두면 끝입니다.
 이후 `main`에 push할 때마다 워크플로가 알아서 배포합니다.
+
+## 도메인 (naming.byeolmamapapa.com)
+
+`CNAME` 파일에 적힌 주소로 서비스합니다. 주소를 바꾸려면 이 파일과 함께
+`index.html`의 canonical · og:url · og:image · JSON-LD, 그리고
+`robots.txt` · `sitemap.xml` 의 주소도 같이 고쳐야 합니다.
+
+**DNS (가비아 등 도메인 구입처에서)**
+
+| 타입 | 호스트 | 값 |
+|---|---|---|
+| CNAME | `naming` | `eunjinpark98.github.io.` |
+
+서브도메인은 A 레코드가 아니라 **CNAME** 입니다. (A 레코드 네 개는
+`byeolmamapapa.com` 같은 최상위 주소에만 씁니다)
+
+**GitHub 쪽**
+
+**Settings → Pages → Custom domain** 에 `naming.byeolmamapapa.com` 을 넣고,
+인증서가 발급되면 **Enforce HTTPS** 를 켭니다. 발급까지 몇 분에서 한 시간쯤
+걸립니다.
+
+> 옛 주소 `eunjinpark98.github.io/star-naming` 은 커스텀 도메인을 붙이면
+> GitHub 이 알아서 새 주소로 넘겨 줍니다. 이미 공유된 링크는 끊기지 않습니다.
 
 ---
 
