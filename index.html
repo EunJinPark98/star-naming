@@ -72,7 +72,7 @@
         {
           "@type": "Question",
           "name": "이름이 마음에 들지 않으면 어떻게 하나요?",
-          "acceptedAnswer": { "@type": "Answer", "text": "결과 화면의 다시 정하기를 누르면 새 이름을 지어 드립니다. 앞서 나온 이름은 다시 나오지 않습니다." }
+          "acceptedAnswer": { "@type": "Answer", "text": "결과 화면의 다시 정하기를 누르면 새 이름을 지어 드립니다. 앞서 나온 이름은 다시 나오지 않으며, 창을 닫았다 다시 오셔도 이어서 새 이름만 보여 드립니다." }
         },
         {
           "@type": "Question",
@@ -187,8 +187,8 @@
         <h3 class="step__title">이름 자수</h3>
         <p class="step__hint">성을 뺀 이름의 글자 수입니다.</p>
         <div class="opts" role="radiogroup" aria-label="이름 자수">
-          <label class="opt"><input type="radio" name="len" value="2" checked /><span>두 글자<em>예) 은진</em></span></label>
-          <label class="opt"><input type="radio" name="len" value="3" /><span>세 글자<em>예) 루미별</em></span></label>
+          <label class="opt"><input type="radio" name="len" value="2" checked /><span>두 글자<em>예) 한별</em></span></label>
+          <label class="opt"><input type="radio" name="len" value="3" /><span>세 글자<em>예) 한아름</em></span></label>
         </div>
       </section>
 
@@ -301,7 +301,7 @@
 
     <details class="qa">
       <summary>이름이 마음에 들지 않으면 어떻게 하나요?</summary>
-      <p>결과 화면의 <b>다시 정하기</b>를 누르면 새 이름을 지어 드립니다. 앞서 나온 이름은 다시 나오지 않으니 마음에 들 때까지 눌러 보세요.</p>
+      <p>결과 화면의 <b>다시 정하기</b>를 누르면 새 이름을 지어 드립니다. 앞서 나온 이름은 다시 나오지 않으니 마음에 들 때까지 눌러 보세요. 창을 닫았다 다시 오셔도 이어서 새 이름만 보여 드리고, 다 보신 뒤에는 <b>처음부터 보기</b>로 되돌릴 수 있어요.</p>
     </details>
 
     <details class="qa">
@@ -364,6 +364,9 @@
     </div>
 
     <p id="modalNote" class="modal__note"></p>
+    <button type="button" id="resetBtn" class="modal__reset" hidden>
+      지금까지 나온 이름 지우고 처음부터 보기
+    </button>
   </div>
 </div>
 

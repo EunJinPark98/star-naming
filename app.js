@@ -685,10 +685,76 @@
     $("loading").hidden = true;
   }
 
+  /* ── 이미 보여 준 이름 기억하기 ───────────────
+   *
+   * 창을 닫았다 열어도 앞서 나온 이름은 다시 내놓지 않는다.
+   * 부모 이름이 바뀌면 다른 이야기이므로 그 조합마다 따로 담아 둔다.
+   * 브라우저가 저장을 막아 두었으면(사생활 보호 창 등) 조용히 넘기고
+   * 이번 판 동안만 기억한다.
+   */
+
+  const HISTORY_KEY = "byeolStarNaming.shown.v1";
+  /** 한 부모 조합당 기억할 이름 수. 넘치면 오래된 것부터 잊는다. */
+  const HISTORY_MAX = 500;
+  /** 부모 조합 수. 넘치면 가장 오래 안 쓴 것부터 잊는다. */
+  const HISTORY_KEYS_MAX = 20;
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      const all = raw ? JSON.parse(raw) : null;
+      return all && typeof all === "object" ? all : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveHistory(all) {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(all));
+    } catch (e) {
+      /* 저장할 수 없으면 이번 판 동안만 기억한다 */
+    }
+  }
+
+  /** 부모 이름 두 개로 만드는 열쇠 */
+  function historyKey(dad, mom) {
+    return (dad || "").replace(/\s+/g, "") + "|" + (mom || "").replace(/\s+/g, "");
+  }
+
+  function readShown(key) {
+    const rec = loadHistory()[key];
+    const list = Array.isArray(rec) ? rec : rec && Array.isArray(rec.n) ? rec.n : [];
+    return new Set(list.filter((x) => typeof x === "string"));
+  }
+
+  function writeShown(key, set) {
+    const all = loadHistory();
+    all[key] = { n: [...set].slice(-HISTORY_MAX), t: Date.now() };
+
+    /* 오래 안 쓴 부모 조합부터 덜어 낸다 */
+    const keys = Object.keys(all);
+    if (keys.length > HISTORY_KEYS_MAX) {
+      keys
+        .sort((a, b) => (all[a].t || 0) - (all[b].t || 0))
+        .slice(0, keys.length - HISTORY_KEYS_MAX)
+        .forEach((k) => delete all[k]);
+    }
+    saveHistory(all);
+  }
+
+  function clearShown(key) {
+    const all = loadHistory();
+    delete all[key];
+    saveHistory(all);
+  }
+
   /** 지금 보여 주고 있는 이름 */
   let current = null;
-  /** 이번 판에서 이미 보여 준 이름들 */
+  /** 이제까지 보여 준 이름들 (이 부모 조합에서) */
   let shown = new Set();
+  /** 지금 쓰고 있는 기억 열쇠 */
+  let shownKey = "";
   /** 마지막으로 제출한 조건 */
   let lastOpts = null;
 
@@ -712,6 +778,7 @@
     $("modalName").textContent = result.full;
 
     $("modalNote").textContent = "";
+    $("resetBtn").hidden = true;
     $("againBtn").disabled = false;
     $("modal").hidden = false;
   }
@@ -802,6 +869,7 @@
     return {
       surname: dad.sur,
       surHanja: null,
+      key: historyKey($("dadName").value, $("momName").value),
       len: Number(document.querySelector('input[name="len"]:checked').value),
       gender: document.querySelector('input[name="gender"]:checked').value,
       script,
@@ -822,17 +890,32 @@
       hideLoading();
 
       if (!result) {
-        if (isAgain) {
-          $("modalNote").textContent = "이 조건으로 더 지어 드릴 이름이 없어요. 조건을 바꿔 보세요.";
-          $("againBtn").disabled = true;
-          $("modal").hidden = false;
-        } else {
+        /* 앞서 나온 이름을 빼고 나니 남은 것이 없을 수 있다.
+           그럴 때는 기억을 지우고 처음부터 볼 수 있게 해 준다. */
+        /* 조건 자체가 맞는 이름이 없는 것인지, 앞서 다 보여 드려서
+           남은 것이 없는 것인지 가려낸다. 기억을 비우고 한 번 더 찾아본다. */
+        const exhausted =
+          shown.size > 0 && !!buildName(Object.assign({}, opts, { exclude: new Set() }));
+
+        if (!exhausted) {
           showError("이 조건에 맞는 이름을 찾지 못했어요. 조건을 조금 풀어 주세요.");
+          return;
         }
+
+        /* 마지막으로 보여 준 이름은 그대로 두고 알림만 얹는다 */
+        if (current) openModal(current.result, current.opts);
+        else $("modal").hidden = false;
+
+        $("modalNote").textContent =
+          "지어 드릴 수 있는 이름 " + shown.size + "개를 모두 보여 드렸어요. " +
+          "조건을 바꾸거나, 처음부터 다시 보실 수 있어요.";
+        $("resetBtn").hidden = false;
+        $("againBtn").disabled = true;
         return;
       }
 
       shown.add(result.full);
+      writeShown(opts.key, shown);
       openModal(result, opts);
     }, wait);
   }
@@ -854,7 +937,9 @@
       return;
     }
 
-    shown = new Set();
+    /* 앞선 방문에서 보여 드린 이름까지 이어서 뺀다 */
+    shownKey = opts.key;
+    shown = readShown(shownKey);
     opts.exclude = shown;
     lastOpts = opts;
     run(opts, false);
@@ -862,6 +947,15 @@
 
   $("againBtn").addEventListener("click", () => {
     if (!lastOpts) return;
+    $("modal").hidden = true;
+    run(lastOpts, true);
+  });
+
+  $("resetBtn").addEventListener("click", () => {
+    if (!lastOpts) return;
+    clearShown(shownKey);
+    shown = new Set();
+    lastOpts.exclude = shown;
     $("modal").hidden = true;
     run(lastOpts, true);
   });
