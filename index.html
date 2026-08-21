@@ -99,15 +99,25 @@
     <img src="assets/logo.png" alt="" width="32" height="32" />
     <span>별별 작명소</span>
   </a>
-  <span class="nav__by">by 별마마파파</span>
 </header>
 
 <main class="wrap">
 
   <section class="hero">
-    <div class="hero__logo">
-      <img src="assets/logo.png" alt="별별 작명소 로고" width="120" height="120" />
+    <!-- 밤하늘에 뜬 이름 글자들. 별자리처럼 이어져 있다. -->
+    <div class="constel" aria-hidden="true">
+      <svg class="constel__lines" viewBox="0 0 300 130" preserveAspectRatio="none">
+        <polyline points="26,86 90,30 152,94 214,36 276,78" />
+      </svg>
+      <span class="constel__g constel__g--1">恩</span>
+      <span class="constel__g constel__g--2">星</span>
+      <span class="constel__g constel__g--3">珍</span>
+      <span class="constel__g constel__g--4">賢</span>
+      <span class="constel__g constel__g--5">昊</span>
+      <i class="constel__spark constel__spark--a">✦</i>
+      <i class="constel__spark constel__spark--b">✧</i>
     </div>
+
     <h1 class="hero__title">별별 작명소</h1>
     <div class="rule" aria-hidden="true">
       <span class="rule__line"></span><span class="rule__star">✦</span><span class="rule__line"></span>
@@ -308,8 +318,10 @@
 </main>
 
 <footer class="footer">
-  <img src="assets/logo.png" alt="" width="34" height="34" />
-  <p class="footer__brand">별마마파파</p>
+  <a class="footer__link" href="https://byeolmamapapa.com/" target="_blank" rel="noopener">
+    <img src="assets/logo.png" alt="" width="34" height="34" />
+    <span class="footer__brand">별마마파파</span>
+  </a>
   <p class="footer__copy">© <span id="year">2026</span> byeolmamapapa</p>
 </footer>
 
