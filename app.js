@@ -405,13 +405,45 @@
 
   /** 아이 이름 후보로 쓸 한자 글자. 부모님 세대 글자(o)는 뺀다. */
   const POOL_HANJA = Object.keys(SYL).filter((s) => !SYL[s].o);
-  /** 한글 이름은 순우리말 글자까지 함께 쓴다. */
-  const POOL_HANGUL = POOL_HANJA.concat(Object.keys(PURE).filter((s) => !SYL[s]));
-
-  const poolFor = (script) => (script === "hangul" ? POOL_HANGUL : POOL_HANJA);
 
   /** 글자 정보. 한자 사전에 없으면 순우리말 사전에서 찾는다. */
   const info = (syl) => SYL[syl] || PURE[syl] || null;
+
+  /**
+   * 순우리말 이름 고르기.
+   *
+   * 한자에서 온 소리를 섞지 않으려면 글자를 짜맞출 수 없다.
+   * 이미 있는 순우리말 이름 가운데서 조건에 맞는 것을 고른다.
+   */
+  function pickPureName(o) {
+    const parentSyls = new Set(o.parents.map((p) => p.syl));
+
+    let list = PURE_NAMES.filter((x) => {
+      if (x.n.length !== o.len) return false;
+      if (o.gender !== "N" && x.g !== "N" && x.g !== o.gender) return false;
+      if (o.mustChar && !x.n.includes(o.mustChar)) return false;
+      if (!choOk(x.n, o.cho1, o.cho2)) return false;
+      if (blocked(o.surname, x.n)) return false;
+      if (o.exclude.has(o.surname + x.n)) return false;
+      return true;
+    });
+    if (!list.length) return null;
+
+    /* 닮게 하고 싶다고 했으면, 부모 이름 글자를 품은 이름을 먼저 본다 */
+    if (o.simil > 0) {
+      const near = list.filter((x) => [...x.n].some((c) => parentSyls.has(c)));
+      if (near.length) list = near;
+    }
+
+    const pick = list[(Math.random() * list.length) | 0];
+    return {
+      slots: [...pick.n].map((syl) => ({ syl, hanja: null, from: null })),
+      given: pick.n,
+      full: o.surname + pick.n,
+      inherited: [],
+      pure: pick,
+    };
+  }
 
   function genderOk(syl, want) {
     if (want === "N") return true;
@@ -454,6 +486,9 @@
    * 못 찾으면 조건을 하나씩 풀면서 다시 찾는다.
    */
   function buildName(o) {
+    /* 한글 이름은 순우리말 목록에서만 고른다 */
+    if (o.script === "hangul") return pickPureName(o);
+
     /* 앞에서부터 차례로 시도한다. 뒤로 갈수록 조건을 하나씩 놓아 준다. */
     const steps = [
       { tag: true, pos: true, gender: true },
@@ -475,7 +510,7 @@
     const parents = o.parents;
     const wantParent = Math.min(plan.parent, o.len, parents.length);
     const wantTag = keep.tag ? plan.tag : 0;
-    const pool = poolFor(o.script);
+    const pool = POOL_HANJA; // 여기는 한자 이름만 온다
 
     /* 부모 한자의 뜻 계열 */
     const parentTags = [
@@ -547,13 +582,6 @@
           break;
         }
         const syl = cands[(Math.random() * cands.length) | 0];
-
-        /* 순우리말 글자는 한자가 없다. 뜻은 우리말 그대로 쓴다. */
-        if (!SYL[syl]) {
-          slots[i] = { syl, hanja: PURE[syl].s, from: null };
-          used.add(syl);
-          continue;
-        }
 
         let hs = SYL[syl].h;
         if (tagLeft > 0) {
@@ -670,12 +698,17 @@
     const charsEl = $("modalChars");
     const meaningEl = $("modalMeaning");
 
-    /* 한자 이름일 때만 한자를 크게 보여 준다.
-       글자 뜻과 뜻풀이는 한글 이름에도 함께 보여 준다. */
-    hanjaEl.textContent =
-      opts.script === "hanja" ? result.slots.map((s) => s.hanja.c).join("") : "";
-    charsEl.innerHTML = readingOf(result.slots, opts.script);
-    meaningEl.textContent = meaningOf(result.slots);
+    if (opts.script === "hangul") {
+      /* 순우리말 이름은 이름 그대로가 전부다.
+         요즘 잘 안 쓰는 말일 때만 짧게 풀어 준다. */
+      hanjaEl.textContent = "";
+      charsEl.innerHTML = "";
+      meaningEl.textContent = result.pure && result.pure.d ? result.pure.d : "";
+    } else {
+      hanjaEl.textContent = result.slots.map((s) => s.hanja.c).join("");
+      charsEl.innerHTML = readingOf(result.slots, opts.script);
+      meaningEl.textContent = meaningOf(result.slots);
+    }
 
     $("modalName").textContent = result.full;
 
@@ -741,7 +774,7 @@
             "처럼 쓰고 소리는 다르게 읽습니다. "
           : '"' + mustChar + '" 소리로 읽는 한자가 사전에 없어요. ';
         return {
-          error: why + '이름 표기를 "한글 이름"으로 바꾸면 그대로 넣어 드릴게요.',
+          error: why + '이름 표기를 "순우리말 이름"으로 바꾸면 그대로 넣어 드릴게요.',
         };
       }
     } else if (mustMode === "cho") {
@@ -756,7 +789,7 @@
       return {
         error:
           script === "hanja"
-            ? "두 분 이름의 한자를 몰라 물려줄 글자가 없어요. 이름 표기를 한글로 바꾸거나 닮음을 0%로 해 주세요."
+            ? "두 분 이름의 한자를 몰라 물려줄 글자가 없어요. 이름 표기를 순우리말로 바꾸거나 닮음을 0%로 해 주세요."
             : "두 분 이름을 다시 확인해 주세요.",
       };
     }
