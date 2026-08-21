@@ -274,13 +274,45 @@
         custom.maxLength = 12;
         if (prev[key] !== undefined) custom.value = prev[key].c;
 
+        const note = document.createElement("p");
+        note.className = "hrow__note";
+
+        /* 적어 준 값을 어떻게 알아들었는지 그때그때 알려 준다 */
+        const syncNote = () => {
+          if (sel.value !== "custom" || !custom.value.trim()) {
+            note.textContent = "";
+            note.hidden = true;
+            return;
+          }
+          const parsed = parseCustom(custom.value, syl);
+          note.hidden = false;
+          if (!parsed) {
+            note.textContent = "";
+            note.hidden = true;
+          } else if (!parsed.custom) {
+            note.textContent = "✓ 사전에서 찾았어요 — " + parsed.c + " · " + parsed.m + " " + syl;
+            note.className = "hrow__note is-ok";
+          } else if (parsed.c && parsed.m !== "뜻 모름") {
+            note.textContent = "✓ " + parsed.c + " · " + parsed.m + " " + syl + " 으로 씁니다";
+            note.className = "hrow__note is-ok";
+          } else if (parsed.c) {
+            note.textContent = "사전에 없는 한자예요. 뜻도 같이 적어 주시면 뜻풀이를 만들어 드려요. (예: " + parsed.c + " 빛날)";
+            note.className = "hrow__note is-warn";
+          } else {
+            note.textContent = "한자를 함께 적어 주세요. 뜻만으로는 한자 이름을 만들 수 없어요.";
+            note.className = "hrow__note is-warn";
+          }
+        };
+
         const syncCustom = () => {
           custom.hidden = sel.value !== "custom";
+          syncNote();
         };
         syncCustom();
         sel.addEventListener("change", syncCustom);
+        custom.addEventListener("input", syncNote);
 
-        row.append(sel, custom);
+        row.append(sel, custom, note);
         rows.append(row);
 
         hanjaRows.push({ who, syl, idx: i, sel, custom, has: !!entry });
@@ -516,9 +548,9 @@
         }
         const syl = cands[(Math.random() * cands.length) | 0];
 
-        /* 순우리말 글자는 한자가 없다. 한글 이름에서만 나온다. */
+        /* 순우리말 글자는 한자가 없다. 뜻은 우리말 그대로 쓴다. */
         if (!SYL[syl]) {
-          slots[i] = { syl, hanja: null, from: null };
+          slots[i] = { syl, hanja: PURE[syl].s, from: null };
           used.add(syl);
           continue;
         }
@@ -585,18 +617,14 @@
   }
 
   /** 글자마다 "보배 진 珍" 처럼 뜻 · 음 · 한자를 늘어놓는다. */
-  function readingOf(slots) {
+  function readingOf(slots, script) {
     return slots
       .map((s) => {
-        const known = s.hanja.m && s.hanja.m !== "뜻 모름";
-        return (
-          '<span class="ch">' +
-          (known ? s.hanja.m + " " : "") +
-          s.syl +
-          " <i>" +
-          s.hanja.c +
-          "</i></span>"
-        );
+        /* 뜻과 소리가 같으면("빛 빛") 한 번만 적는다 */
+        const known = s.hanja && s.hanja.m && s.hanja.m !== "뜻 모름" && s.hanja.m !== s.syl;
+        /* 한글 이름을 골랐으면 한자는 보여 주지 않는다 */
+        const ch = script === "hanja" && s.hanja && s.hanja.c ? ' <i>' + s.hanja.c + "</i>" : "";
+        return '<span class="ch">' + (known ? s.hanja.m + " " : "") + s.syl + ch + "</span>";
       })
       .join("");
   }
@@ -642,15 +670,12 @@
     const charsEl = $("modalChars");
     const meaningEl = $("modalMeaning");
 
-    if (opts.script === "hanja") {
-      hanjaEl.textContent = result.slots.map((s) => s.hanja.c).join("");
-      charsEl.innerHTML = readingOf(result.slots);
-      meaningEl.textContent = meaningOf(result.slots);
-    } else {
-      hanjaEl.textContent = "";
-      charsEl.innerHTML = "";
-      meaningEl.textContent = "";
-    }
+    /* 한자 이름일 때만 한자를 크게 보여 준다.
+       글자 뜻과 뜻풀이는 한글 이름에도 함께 보여 준다. */
+    hanjaEl.textContent =
+      opts.script === "hanja" ? result.slots.map((s) => s.hanja.c).join("") : "";
+    charsEl.innerHTML = readingOf(result.slots, opts.script);
+    meaningEl.textContent = meaningOf(result.slots);
 
     $("modalName").textContent = result.full;
 
@@ -708,9 +733,15 @@
       /* 한글 이름은 소리만 있으면 되니 어떤 글자든 넣어 드린다.
          한자 이름은 그 글자의 한자를 알아야 한다. */
       if (script === "hanja" && !SYL[mustChar]) {
+        /* "별"처럼 한자의 뜻(훈)일 뿐 소리(음)가 아닌 글자가 많다.
+           별을 한자로 적으면 星이고, 읽는 소리는 "성"이다. */
+        const pure = PURE[mustChar];
+        const why = pure
+          ? '"' + mustChar + '"은(는) 한자의 뜻이에요. 한자로는 ' + pure.why +
+            "처럼 쓰고 소리는 다르게 읽습니다. "
+          : '"' + mustChar + '" 소리로 읽는 한자가 사전에 없어요. ';
         return {
-          error:
-            '"' + mustChar + '" 는 한자를 모르는 글자예요. 이름 표기를 "한글 이름"으로 바꾸면 넣어 드릴 수 있어요.',
+          error: why + '이름 표기를 "한글 이름"으로 바꾸면 그대로 넣어 드릴게요.',
         };
       }
     } else if (mustMode === "cho") {

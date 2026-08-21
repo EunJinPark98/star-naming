@@ -179,7 +179,19 @@ select option { background: #12131c; color: var(--text); }
   font-size: 0.92rem !important;
   border-color: rgba(245,197,66,0.4) !important;
 }
-@media (max-width: 460px) { .hrow__custom { margin-left: 0; } }
+.hrow__note {
+  flex: 1 1 100%;
+  margin: -2px 0 0;
+  margin-left: 116px;
+  font-family: var(--font-sub);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.hrow__note.is-ok { color: var(--gold-2); }
+.hrow__note.is-warn { color: #ffc9a0; }
+@media (max-width: 460px) {
+  .hrow__custom, .hrow__note { margin-left: 0; }
+}
 .hrow__who {
   flex: 0 0 auto; min-width: 62px;
   font-family: var(--font-sub); font-size: 0.78rem; color: var(--muted-dim);
