@@ -660,14 +660,6 @@ input[type="range"]::-moz-range-thumb {
 }
 .modal__meaning:empty { display: none; }
 
-/* 순우리말 이름에는 뜻 대신 이 표만 단다 */
-.modal__meaning--tag {
-  font-family: var(--font-sub);
-  font-size: 0.88rem;
-  color: var(--muted);
-  letter-spacing: 0.02em;
-}
-
 /* 글자마다 "보배 진 珍" */
 .modal__chars {
   display: flex;

@@ -699,13 +699,11 @@
     const meaningEl = $("modalMeaning");
 
     if (opts.script === "hangul") {
-      /* 순우리말 이름은 이름 그대로가 전부다. 한자도 뜻풀이도 붙이지 않는다. */
+      /* 순우리말 이름은 한자가 없다. 뜻은 목록에 담아 둔 그대로 보여 준다. */
       hanjaEl.textContent = "";
       charsEl.innerHTML = "";
-      meaningEl.textContent = "순우리말이에요";
-      meaningEl.classList.add("modal__meaning--tag");
+      meaningEl.textContent = result.pure ? result.pure.d : "";
     } else {
-      meaningEl.classList.remove("modal__meaning--tag");
       hanjaEl.textContent = result.slots.map((s) => s.hanja.c).join("");
       charsEl.innerHTML = readingOf(result.slots, opts.script);
       meaningEl.textContent = meaningOf(result.slots);
