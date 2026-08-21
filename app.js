@@ -91,6 +91,107 @@
     return CHOSUNG[Math.floor((ch.charCodeAt(0) - 0xac00) / 588)];
   };
 
+  /* ── 직접 적은 한자 읽기 ──────────────────── */
+
+  const CJK = /[一-鿿㐀-䶿豈-﫿]/;
+
+  /** 한자 한 글자로 사전을 뒤지기 위한 색인 */
+  const HANJA_INDEX = (() => {
+    const idx = {};
+    for (const syl of Object.keys(SYL)) {
+      for (const h of SYL[syl].h) if (!idx[h.c]) idx[h.c] = h;
+    }
+    return idx;
+  })();
+
+  const JONG = ["", "ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+
+  function jongOf(word) {
+    const ch = word[word.length - 1];
+    if (!ch || !isHangulSyllable(ch)) return "";
+    return JONG[(ch.charCodeAt(0) - 0xac00) % 28];
+  }
+
+  /** 끝 받침을 바꾼 말을 만든다. 빛남 ↔ 빛날 처럼. */
+  function swapJong(word, from, to) {
+    const ch = word[word.length - 1];
+    if (!ch || !isHangulSyllable(ch)) return null;
+    const code = ch.charCodeAt(0) - 0xac00;
+    const jong = code % 28;
+    if (JONG[jong] !== from) return null;
+    return word.slice(0, -1) + String.fromCharCode(0xac00 + code - jong + JONG.indexOf(to));
+  }
+
+  /** 흔히 다르게 부르는 훈 */
+  const HUN_ALIAS = { 한: "하나", 두: "둘", 석: "셋", 온: "온전할" };
+
+  /**
+   * 사전의 뜻과 견줄 수 있는 꼴들을 모은다.
+   * "빛날"로 적어도 사전의 "빛남"을 찾아내기 위한 것.
+   */
+  function hunForms(hun) {
+    const out = new Set([hun]);
+    if (HUN_ALIAS[hun]) out.add(HUN_ALIAS[hun]);
+    const toM = swapJong(hun, "ㄹ", "ㅁ");
+    if (toM) out.add(toM);
+    const toR = swapJong(hun, "ㅁ", "ㄹ");
+    if (toR) out.add(toR);
+    return [...out];
+  }
+
+  /** "한 일"처럼 뒤에 붙은 음을 떼어낸다 */
+  function stripReading(text, syl) {
+    let t = (text || "").replace(/[()（）·,]/g, " ").replace(/\s+/g, " ").trim();
+    if (!t) return "";
+    const parts = t.split(" ");
+    if (parts.length > 1 && parts[parts.length - 1] === syl) parts.pop();
+    t = parts.join(" ").trim();
+    if (t.length > 1 && t.endsWith(syl)) t = t.slice(0, -syl.length).trim();
+    return t;
+  }
+
+  /** 사전에 없는 뜻으로 임시 항목을 만든다 */
+  function customHanja(hun, ch) {
+    const m = hun || "뜻 모름";
+    /* 한 글자거나 "밝을"처럼 이미 꾸며 주는 꼴이면 그대로 쓰고,
+       "은혜"처럼 이름씨면 "의"를 붙여야 말이 된다. */
+    const adnominal = m.length === 1 || jongOf(m) === "ㄹ";
+    return {
+      c: ch || "",
+      m,
+      a: adnominal ? m : m + "의",
+      j: adnominal ? m : m + (jongOf(m) ? "과" : "와"),
+      t: null,
+      custom: true,
+      short: adnominal,
+    };
+  }
+
+  /**
+   * 직접 적은 값을 읽는다.
+   * "一", "한 일", "하나", "一 하나" 를 모두 받는다.
+   */
+  function parseCustom(text, syl) {
+    const raw = (text || "").trim();
+    if (!raw) return null;
+
+    const hit = raw.match(CJK);
+    if (hit) {
+      const found = HANJA_INDEX[hit[0]];
+      if (found) return found; // 사전에 있으면 뜻풀이까지 그대로 쓴다
+      return customHanja(stripReading(raw.replace(CJK, " "), syl), hit[0]);
+    }
+
+    const hun = stripReading(raw, syl);
+    const entry = SYL[syl];
+    if (entry && hun) {
+      const forms = hunForms(hun);
+      const found = entry.h.find((h) => forms.some((f) => f === h.m || h.m.includes(f) || f.includes(h.m)));
+      if (found) return found;
+    }
+    return customHanja(hun, "");
+  }
+
   /** 이름을 성과 이름으로 나눈다. 두 글자 성도 알아본다. */
   function splitName(raw) {
     const n = (raw || "").replace(/\s+/g, "");
@@ -122,7 +223,9 @@
 
     /* 이미 고른 값은 다시 그려도 유지한다 */
     const prev = {};
-    for (const r of hanjaRows) prev[r.who + r.syl + r.idx] = r.sel.value;
+    for (const r of hanjaRows) {
+      prev[r.who + r.syl + r.idx] = { v: r.sel.value, c: r.custom ? r.custom.value : "" };
+    }
 
     rows.innerHTML = "";
     hanjaRows = [];
@@ -152,19 +255,35 @@
             o.textContent = h.c + " · " + h.m + " " + syl;
             sel.append(o);
           });
-          const key = who + syl + i;
-          if (prev[key] !== undefined) sel.value = prev[key];
-        } else {
-          const o = document.createElement("option");
-          o.textContent = "한자 뜻 모름 (소리만 물려줌)";
-          sel.append(o);
-          sel.disabled = true;
-          sel.classList.add("is-unknown");
         }
-        row.append(sel);
+        const own = document.createElement("option");
+        own.value = "custom";
+        own.textContent = entry ? "✎ 직접 입력" : "✎ 직접 입력 (사전에 없는 글자)";
+        sel.append(own);
+
+        /* 사전에 없는 글자는 처음부터 직접 입력으로 연다 */
+        if (!entry) sel.value = "custom";
+
+        const key = who + syl + i;
+        if (prev[key] !== undefined) sel.value = prev[key].v;
+
+        const custom = document.createElement("input");
+        custom.type = "text";
+        custom.className = "hrow__custom";
+        custom.placeholder = "예) 一  ·  한 일  ·  하나";
+        custom.maxLength = 12;
+        if (prev[key] !== undefined) custom.value = prev[key].c;
+
+        const syncCustom = () => {
+          custom.hidden = sel.value !== "custom";
+        };
+        syncCustom();
+        sel.addEventListener("change", syncCustom);
+
+        row.append(sel, custom);
         rows.append(row);
 
-        hanjaRows.push({ who, syl, idx: i, sel, has: !!entry });
+        hanjaRows.push({ who, syl, idx: i, sel, custom, has: !!entry });
       });
     };
 
@@ -183,11 +302,17 @@
    * (한자 이름에서는 한자가 있어야 하니 뒤에서 걸러 낸다)
    */
   function parentSyllables() {
-    return hanjaRows.map((r) => ({
-      who: r.who,
-      syl: r.syl,
-      hanja: r.has ? SYL[r.syl].h[Number(r.sel.value) || 0] : null,
-    }));
+    return hanjaRows.map((r) => {
+      let hanja = null;
+      if (r.sel.value === "custom") {
+        hanja = parseCustom(r.custom.value, r.syl);
+        /* 한자도 뜻도 안 적었으면 소리만 물려준다 */
+        if (hanja && !hanja.c && hanja.m === "뜻 모름") hanja = null;
+      } else if (r.has) {
+        hanja = SYL[r.syl].h[Number(r.sel.value) || 0];
+      }
+      return { who: r.who, syl: r.syl, hanja };
+    });
   }
 
   /* ── 유사도 ───────────────────────────────── */
@@ -322,7 +447,7 @@
 
     /* 부모 한자의 뜻 계열 */
     const parentTags = [
-      ...new Set(parents.filter((p) => p.hanja).map((p) => p.hanja.t)),
+      ...new Set(parents.filter((p) => p.hanja && p.hanja.t).map((p) => p.hanja.t)),
     ];
 
     const results = [];
@@ -339,7 +464,8 @@
         /* 물려받을 글자도 고른 성별에 맞는 것을 먼저 본다.
            그것만으로 수가 모자라면 그때 나머지도 함께 본다. */
         /* 한자 이름은 한자를 아는 글자만 물려받을 수 있다 */
-        let source = o.script === "hanja" ? parents.filter((p) => p.hanja) : parents;
+        /* 한자 이름에 넣으려면 한자 글자를 알아야 한다 */
+        let source = o.script === "hanja" ? parents.filter((p) => p.hanja && p.hanja.c) : parents;
         if (keep.gender && o.gender !== "N") {
           const fit = source.filter((p) => genderOk(p.syl, o.gender));
           const whos = new Set(fit.map((p) => p.who));
@@ -445,6 +571,8 @@
    */
   function meaningOf(slots) {
     const h = slots.map((s) => s.hanja);
+    /* 뜻을 모르는 글자가 섞이면 억지로 풀지 않는다 */
+    if (h.some((x) => !x || x.m === "뜻 모름")) return "";
     const last = h[h.length - 1];
     const head = CONCRETE.has(last.m);
 
@@ -459,16 +587,17 @@
   /** 글자마다 "보배 진 珍" 처럼 뜻 · 음 · 한자를 늘어놓는다. */
   function readingOf(slots) {
     return slots
-      .map(
-        (s) =>
+      .map((s) => {
+        const known = s.hanja.m && s.hanja.m !== "뜻 모름";
+        return (
           '<span class="ch">' +
-          s.hanja.m +
-          " " +
+          (known ? s.hanja.m + " " : "") +
           s.syl +
-          ' <i>' +
+          " <i>" +
           s.hanja.c +
           "</i></span>"
-      )
+        );
+      })
       .join("");
   }
 
@@ -565,7 +694,7 @@
     const parents = parentSyllables();
 
     /* 한자 이름은 뜻을 아는 글자라야 물려받을 수 있다 */
-    const usable = script === "hanja" ? parents.filter((p) => p.hanja) : parents;
+    const usable = script === "hanja" ? parents.filter((p) => p.hanja && p.hanja.c) : parents;
 
     const mustMode = document.querySelector('input[name="must"]:checked').value;
     let mustChar = "";

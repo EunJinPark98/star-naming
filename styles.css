@@ -171,7 +171,15 @@ select option { background: #12131c; color: var(--text); }
 .hanja-pick { margin-top: 20px; padding-top: 18px; border-top: 1px dashed rgba(245,197,66,0.2); }
 .hanja-rows { display: flex; flex-direction: column; gap: 14px; }
 
-.hrow { display: flex; align-items: center; gap: 12px; }
+.hrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hrow__custom {
+  flex: 1 1 100%;
+  margin-left: 116px;
+  min-height: 42px !important;
+  font-size: 0.92rem !important;
+  border-color: rgba(245,197,66,0.4) !important;
+}
+@media (max-width: 460px) { .hrow__custom { margin-left: 0; } }
 .hrow__who {
   flex: 0 0 auto; min-width: 62px;
   font-family: var(--font-sub); font-size: 0.78rem; color: var(--muted-dim);
