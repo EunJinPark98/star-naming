@@ -486,28 +486,11 @@
 
     $("modalName").textContent = result.full;
 
+    /* 이름과 뜻만 보여 준다. 고른 조건은 뒤에 그대로 남아 있으니 되풀이하지 않는다. */
     const rows = [];
     if (opts.script === "hanja") {
       rows.push(["글자 뜻", readingOf(result.slots)]);
     }
-    if (result.inherited.length) {
-      rows.push([
-        "이어받은 글자",
-        result.inherited
-          .map((p) => p.who + " 이름의 <b>" + p.syl + (opts.script === "hanja" ? "(" + p.hanja.c + ")" : "") + "</b>")
-          .join(", "),
-      ]);
-    } else if (opts.simil === 25) {
-      rows.push(["이어받은 뜻", "부모님 한자와 같은 뜻 계열에서 골랐어요"]);
-    }
-    rows.push([
-      "고른 조건",
-      [
-        opts.gender === "M" ? "남아" : opts.gender === "F" ? "여아" : "성별 무관",
-        opts.len + "글자",
-        "닮음 " + opts.simil + "%",
-      ].join(" · "),
-    ]);
 
     detailEl.innerHTML = rows
       .map((r) => '<div class="dl"><span class="dl__k">' + r[0] + '</span><span class="dl__v">' + r[1] + "</span></div>")
