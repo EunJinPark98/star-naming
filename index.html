@@ -142,28 +142,9 @@
       </div>
     </section>
 
-    <!-- 2. 유사도 -->
+    <!-- 2. 성별 · 표기 -->
     <section class="step">
-      <h2 class="step__title"><span class="step__no">2</span> 부모 이름과 얼마나 닮게 할까요?</h2>
-      <input type="range" id="simil" min="0" max="100" step="25" value="50" />
-      <div class="simil">
-        <output id="similPct" class="simil__pct">50%</output>
-        <p id="similDesc" class="simil__desc">부모님 이름에서 한 글자를 그대로 가져옵니다.</p>
-      </div>
-    </section>
-
-    <!-- 3. 표기 -->
-    <section class="step">
-      <h2 class="step__title"><span class="step__no">3</span> 이름 표기</h2>
-      <div class="opts" role="radiogroup" aria-label="이름 표기">
-        <label class="opt"><input type="radio" name="script" value="hanja" checked /><span>한자 이름<em>뜻풀이까지</em></span></label>
-        <label class="opt"><input type="radio" name="script" value="hangul" /><span>한글 이름<em>소리만</em></span></label>
-      </div>
-    </section>
-
-    <!-- 4. 성별 -->
-    <section class="step">
-      <h2 class="step__title"><span class="step__no">4</span> 성별</h2>
+      <h2 class="step__title"><span class="step__no">2</span> 성별</h2>
       <div class="opts opts--3" role="radiogroup" aria-label="성별">
         <label class="opt"><input type="radio" name="gender" value="M" /><span>남아</span></label>
         <label class="opt"><input type="radio" name="gender" value="F" /><span>여아</span></label>
@@ -171,19 +152,38 @@
       </div>
     </section>
 
-    <!-- 5. 자수 -->
     <section class="step">
-      <h2 class="step__title"><span class="step__no">5</span> 이름 자수</h2>
-      <p class="step__hint">성을 뺀 이름의 글자 수입니다.</p>
-      <div class="opts" role="radiogroup" aria-label="이름 자수">
-        <label class="opt"><input type="radio" name="len" value="2" checked /><span>두 글자<em>예) 은진</em></span></label>
-        <label class="opt"><input type="radio" name="len" value="3" /><span>세 글자<em>예) 은지호</em></span></label>
+      <h2 class="step__title"><span class="step__no">3</span> 이름 표기</h2>
+      <div class="opts" role="radiogroup" aria-label="이름 표기">
+        <label class="opt"><input type="radio" name="script" value="hanja" checked /><span>한자 이름<em>뜻풀이까지</em></span></label>
+        <label class="opt"><input type="radio" name="script" value="hangul" /><span>한글 이름<em>순우리말도</em></span></label>
       </div>
     </section>
 
-    <!-- 6. 조건 -->
-    <section class="step">
-      <h2 class="step__title"><span class="step__no">6</span> 꼭 넣고 싶은 것 <span class="tag-opt">선택</span></h2>
+    <!-- 더 고르고 싶을 때만 펼치는 칸 -->
+    <details class="more">
+      <summary>더 자세히 고르기</summary>
+
+      <section class="step">
+        <h3 class="step__title">부모 이름과 얼마나 닮게 할까요?</h3>
+        <input type="range" id="simil" min="0" max="100" step="25" value="50" />
+        <div class="simil">
+          <output id="similPct" class="simil__pct">50%</output>
+          <p id="similDesc" class="simil__desc">부모님 이름에서 한 글자를 그대로 가져옵니다.</p>
+        </div>
+      </section>
+
+      <section class="step">
+        <h3 class="step__title">이름 자수</h3>
+        <p class="step__hint">성을 뺀 이름의 글자 수입니다.</p>
+        <div class="opts" role="radiogroup" aria-label="이름 자수">
+          <label class="opt"><input type="radio" name="len" value="2" checked /><span>두 글자<em>예) 은진</em></span></label>
+          <label class="opt"><input type="radio" name="len" value="3" /><span>세 글자<em>예) 은지호</em></span></label>
+        </div>
+      </section>
+
+      <section class="step">
+      <h3 class="step__title">꼭 넣고 싶은 것</h3>
       <p class="step__hint">글자와 초성 중 하나만 고를 수 있어요.</p>
 
       <div class="opts" role="radiogroup" aria-label="조건 종류">
@@ -212,7 +212,8 @@
         </div>
         <p class="step__hint">둘 다 고르지 않아도 됩니다. 고른 것만 맞춰 드려요.</p>
       </div>
-    </section>
+      </section>
+    </details>
 
     <p id="formError" class="form-error" hidden></p>
 

@@ -250,6 +250,31 @@ input[type="range"]::-moz-range-thumb {
 
 .must-box { margin-top: 14px; }
 
+/* 더 자세히 고르기 */
+.more { border-top: 1px solid rgba(255,255,255,0.06); }
+.more > summary {
+  position: relative;
+  padding: 18px 30px 18px 2px;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-sub);
+  font-size: 0.92rem;
+  color: var(--gold-2);
+}
+.more > summary::-webkit-details-marker { display: none; }
+.more > summary::after {
+  content: "▾";
+  position: absolute; right: 6px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+.more[open] > summary::after { transform: translateY(-50%) rotate(180deg); }
+.more[open] > summary { color: var(--gold-1); }
+.more .step { padding-top: 4px; }
+.more .step:first-of-type { border-top: 0; }
+.more .step__title { font-size: 1rem; }
+
 /* ── 버튼 ─────────────────────────────────────── */
 
 .btn {

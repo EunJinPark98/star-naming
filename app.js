@@ -156,9 +156,10 @@
           if (prev[key] !== undefined) sel.value = prev[key];
         } else {
           const o = document.createElement("option");
-          o.textContent = "사전에 없는 글자예요";
+          o.textContent = "한자 뜻 모름 (소리만 물려줌)";
           sel.append(o);
           sel.disabled = true;
+          sel.classList.add("is-unknown");
         }
         row.append(sel);
         rows.append(row);
@@ -175,15 +176,18 @@
   $("dadName").addEventListener("input", renderHanjaPick);
   $("momName").addEventListener("input", renderHanjaPick);
 
-  /** 부모에게서 물려받을 수 있는 글자들 */
+  /**
+   * 부모에게서 물려받을 수 있는 글자들.
+   *
+   * 사전에 없는 글자도 소리는 물려받을 수 있으므로 함께 넘긴다.
+   * (한자 이름에서는 한자가 있어야 하니 뒤에서 걸러 낸다)
+   */
   function parentSyllables() {
-    return hanjaRows
-      .filter((r) => r.has)
-      .map((r) => ({
-        who: r.who,
-        syl: r.syl,
-        hanja: SYL[r.syl].h[Number(r.sel.value) || 0],
-      }));
+    return hanjaRows.map((r) => ({
+      who: r.who,
+      syl: r.syl,
+      hanja: r.has ? SYL[r.syl].h[Number(r.sel.value) || 0] : null,
+    }));
   }
 
   /* ── 유사도 ───────────────────────────────── */
@@ -242,16 +246,27 @@
 
   /* ── 이름 짓기 ────────────────────────────── */
 
-  const POOL = Object.keys(SYL);
+  /** 아이 이름 후보로 쓸 한자 글자. 부모님 세대 글자(o)는 뺀다. */
+  const POOL_HANJA = Object.keys(SYL).filter((s) => !SYL[s].o);
+  /** 한글 이름은 순우리말 글자까지 함께 쓴다. */
+  const POOL_HANGUL = POOL_HANJA.concat(Object.keys(PURE).filter((s) => !SYL[s]));
+
+  const poolFor = (script) => (script === "hangul" ? POOL_HANGUL : POOL_HANJA);
+
+  /** 글자 정보. 한자 사전에 없으면 순우리말 사전에서 찾는다. */
+  const info = (syl) => SYL[syl] || PURE[syl] || null;
 
   function genderOk(syl, want) {
     if (want === "N") return true;
-    const g = SYL[syl].g;
-    return g === "N" || g === want;
+    const d = info(syl);
+    if (!d) return true; // 사전에 없는 글자는 가리지 않는다
+    return d.g === "N" || d.g === want;
   }
 
   function posOk(syl, i, len) {
-    const p = SYL[syl].p;
+    const d = info(syl);
+    if (!d) return true;
+    const p = d.p;
     if (p === "b") return true;
     if (i === 0) return p === "1";
     if (i === len - 1) return p === "2";
@@ -303,9 +318,12 @@
     const parents = o.parents;
     const wantParent = Math.min(plan.parent, o.len, parents.length);
     const wantTag = keep.tag ? plan.tag : 0;
+    const pool = poolFor(o.script);
 
     /* 부모 한자의 뜻 계열 */
-    const parentTags = [...new Set(parents.map((p) => p.hanja.t))];
+    const parentTags = [
+      ...new Set(parents.filter((p) => p.hanja).map((p) => p.hanja.t)),
+    ];
 
     const results = [];
     const seen = new Set();
@@ -320,9 +338,10 @@
       if (wantParent > 0) {
         /* 물려받을 글자도 고른 성별에 맞는 것을 먼저 본다.
            그것만으로 수가 모자라면 그때 나머지도 함께 본다. */
-        let source = parents;
+        /* 한자 이름은 한자를 아는 글자만 물려받을 수 있다 */
+        let source = o.script === "hanja" ? parents.filter((p) => p.hanja) : parents;
         if (keep.gender && o.gender !== "N") {
-          const fit = parents.filter((p) => genderOk(p.syl, o.gender));
+          const fit = source.filter((p) => genderOk(p.syl, o.gender));
           const whos = new Set(fit.map((p) => p.who));
           const enough = wantParent >= 2 ? whos.size >= 2 : fit.length > 0;
           if (enough) source = fit;
@@ -358,11 +377,11 @@
       let fail = false;
       for (let i = 0; i < o.len; i++) {
         if (slots[i]) continue;
-        const cands = POOL.filter((s) => {
+        const cands = pool.filter((s) => {
           if (used.has(s)) return false;
           if (keep.gender && !genderOk(s, o.gender)) return false;
           if (keep.pos && !posOk(s, i, o.len)) return false;
-          if (tagLeft > 0 && !SYL[s].h.some((h) => parentTags.includes(h.t))) return false;
+          if (tagLeft > 0 && !(SYL[s] && SYL[s].h.some((h) => parentTags.includes(h.t)))) return false;
           return true;
         });
         if (!cands.length) {
@@ -370,6 +389,14 @@
           break;
         }
         const syl = cands[(Math.random() * cands.length) | 0];
+
+        /* 순우리말 글자는 한자가 없다. 한글 이름에서만 나온다. */
+        if (!SYL[syl]) {
+          slots[i] = { syl, hanja: null, from: null };
+          used.add(syl);
+          continue;
+        }
+
         let hs = SYL[syl].h;
         if (tagLeft > 0) {
           const tagged = hs.filter((h) => parentTags.includes(h.t));
@@ -534,10 +561,11 @@
     if (!mom) err.push("엄마 이름을 두 글자 이상 한글로 적어 주세요.");
     if (err.length) return { error: err.join(" ") };
 
+    const script = document.querySelector('input[name="script"]:checked').value;
     const parents = parentSyllables();
-    if (!parents.length) {
-      return { error: "두 분 이름 글자가 사전에 없어요. 다른 이름으로 시도해 주세요." };
-    }
+
+    /* 한자 이름은 뜻을 아는 글자라야 물려받을 수 있다 */
+    const usable = script === "hanja" ? parents.filter((p) => p.hanja) : parents;
 
     const mustMode = document.querySelector('input[name="must"]:checked').value;
     let mustChar = "";
@@ -548,8 +576,13 @@
       mustChar = $("mustCharInput").value.trim();
       if (!mustChar) return { error: "꼭 넣을 글자를 한 글자 적어 주세요." };
       if (!isHangulSyllable(mustChar)) return { error: "꼭 넣을 글자는 한글 한 글자여야 해요." };
-      if (!SYL[mustChar]) {
-        return { error: '"' + mustChar + '" 는 아직 사전에 없는 글자예요. 다른 글자로 골라 주세요.' };
+      /* 한글 이름은 소리만 있으면 되니 어떤 글자든 넣어 드린다.
+         한자 이름은 그 글자의 한자를 알아야 한다. */
+      if (script === "hanja" && !SYL[mustChar]) {
+        return {
+          error:
+            '"' + mustChar + '" 는 한자를 모르는 글자예요. 이름 표기를 "한글 이름"으로 바꾸면 넣어 드릴 수 있어요.',
+        };
       }
     } else if (mustMode === "cho") {
       cho1 = $("cho1").value;
@@ -558,8 +591,19 @@
     }
 
     const simil = Number($("simil").value);
-    if (simil === 100 && new Set(parents.map((p) => p.who)).size < 2) {
-      return { error: "닮음 100%는 두 분 이름이 모두 사전에 있어야 해요. 유사도를 낮춰 주세요." };
+
+    if (simil > 0 && !usable.length) {
+      return {
+        error:
+          script === "hanja"
+            ? "두 분 이름의 한자를 몰라 물려줄 글자가 없어요. 이름 표기를 한글로 바꾸거나 닮음을 0%로 해 주세요."
+            : "두 분 이름을 다시 확인해 주세요.",
+      };
+    }
+    if (simil === 100 && new Set(usable.map((p) => p.who)).size < 2) {
+      return {
+        error: "닮음 100%는 아빠·엄마 이름에서 각각 한 글자씩 가져와요. 닮음을 조금 낮춰 주세요.",
+      };
     }
 
     /* 성의 한자는 사전에 없을 수 있으니 한글 그대로 둔다 */
@@ -568,7 +612,7 @@
       surHanja: null,
       len: Number(document.querySelector('input[name="len"]:checked').value),
       gender: document.querySelector('input[name="gender"]:checked').value,
-      script: document.querySelector('input[name="script"]:checked').value,
+      script,
       simil,
       mustChar,
       cho1,
