@@ -324,8 +324,58 @@
     box.hidden = hanjaRows.length === 0;
   }
 
-  $("dadName").addEventListener("input", renderHanjaPick);
-  $("momName").addEventListener("input", renderHanjaPick);
+  $("dadName").addEventListener("input", onNamesChanged);
+  $("momName").addEventListener("input", onNamesChanged);
+
+  /* ── 아이의 성 ────────────────────────────── */
+
+  /* 직접 고른 적이 있으면 그 뜻을 함부로 바꾸지 않는다 */
+  let surPicked = false;
+
+  document.querySelectorAll('input[name="sur"]').forEach((el) => {
+    el.addEventListener("change", () => {
+      surPicked = true;
+      $("surBox").hidden =
+        document.querySelector('input[name="sur"]:checked').value !== "custom";
+    });
+  });
+
+  /**
+   * 이름을 적지 않은 쪽의 성은 고를 수 없다.
+   * 고를 수 없게 된 것을 골라 두었다면 고를 수 있는 쪽으로 옮겨 준다.
+   */
+  function syncSurnamePick() {
+    const dad = splitName($("dadName").value);
+    const mom = splitName($("momName").value);
+    const pairs = [["dad", dad, "surDad"], ["mom", mom, "surMom"]];
+
+    for (const [value, parsed, hintId] of pairs) {
+      const input = document.querySelector('input[name="sur"][value="' + value + '"]');
+      const label = input.closest(".opt");
+      input.disabled = !parsed;
+      label.classList.toggle("is-off", !parsed);
+      $(hintId).textContent = parsed ? parsed.sur : "이름을 적어 주세요";
+    }
+
+    const cur = document.querySelector('input[name="sur"]:checked');
+    /* 고를 수 없게 됐거나, 이름이 없어 직접 입력으로 밀려나 있던 것이라면
+       이제 고를 수 있는 쪽으로 옮겨 준다. 직접 고르신 것은 그대로 둔다. */
+    const strayed = cur && (cur.disabled || (cur.value === "custom" && !surPicked));
+    if (strayed) {
+      const next =
+        (dad && document.querySelector('input[name="sur"][value="dad"]')) ||
+        (mom && document.querySelector('input[name="sur"][value="mom"]')) ||
+        document.querySelector('input[name="sur"][value="custom"]');
+      next.checked = true;
+      $("surBox").hidden = next.value !== "custom";
+    }
+  }
+
+  function onNamesChanged() {
+    renderHanjaPick();
+    syncSurnamePick();
+    syncSimil();
+  }
 
   /**
    * 부모에게서 물려받을 수 있는 글자들.
@@ -357,8 +407,34 @@
     100: { parent: 2, tag: 0, desc: "아빠와 엄마 이름에서 각각 한 글자씩 가져옵니다." },
   };
 
+  /* 잠기기 직전에 고르던 닮음. 이름을 적으면 이 값으로 되돌린다. */
+  let similHeld = "50";
+
   function syncSimil() {
-    const v = Number($("simil").value);
+    /* 물려받을 이름이 없으면 닮음을 고를 수가 없다. 0%에 묶어 둔다. */
+    const hasParent = !!(splitName($("dadName").value) || splitName($("momName").value));
+    const slider = $("simil");
+
+    if (!hasParent) {
+      /* 잠그는 동안에는 손잡이도 0 에 둔다. 고르던 값은 기억했다가 되돌린다. */
+      if (!slider.disabled) similHeld = slider.value;
+      slider.value = "0";
+      slider.disabled = true;
+      $("simil").closest(".step").classList.add("is-off");
+      $("similPct").textContent = "0%";
+      $("similDesc").textContent =
+        "엄마 아빠 이름을 적지 않으셔서, 이름을 새로 지어 드립니다. " +
+        "두 분 이름을 적으시면 닮음 정도를 고를 수 있어요.";
+      return;
+    }
+
+    if (slider.disabled) {
+      slider.value = similHeld;
+      slider.disabled = false;
+    }
+    $("simil").closest(".step").classList.remove("is-off");
+
+    const v = Number(slider.value);
     const len = Number(document.querySelector('input[name="len"]:checked').value);
     $("similPct").textContent = v + "%";
     /* 외자는 자리가 하나뿐이라 두 분에게서 한 글자씩 받을 수 없다 */
@@ -371,6 +447,8 @@
     el.addEventListener("change", syncSimil)
   );
   $("simil").addEventListener("input", syncSimil);
+  /* 첫 화면은 이름이 비어 있으니 성 고르기와 닮음도 그에 맞춰 둔다 */
+  syncSurnamePick();
   syncSimil();
 
   /* ── 조건 칸 여닫기 ───────────────────────── */
@@ -782,13 +860,30 @@
   /* ── 제출 ─────────────────────────────────── */
 
   function readOptions() {
-    const dad = splitName($("dadName").value);
-    const mom = splitName($("momName").value);
-    const err = [];
+    const dadRaw = $("dadName").value.trim();
+    const momRaw = $("momName").value.trim();
+    const dad = splitName(dadRaw);
+    const mom = splitName(momRaw);
 
-    if (!dad) err.push("아빠 이름을 두 글자 이상 한글로 적어 주세요.");
-    if (!mom) err.push("엄마 이름을 두 글자 이상 한글로 적어 주세요.");
-    if (err.length) return { error: err.join(" ") };
+    /* 이름은 적지 않아도 된다. 다만 적다 말면 알려 준다. */
+    if (dadRaw && !dad) return { error: "아빠 이름을 두 글자 이상 한글로 적어 주세요." };
+    if (momRaw && !mom) return { error: "엄마 이름을 두 글자 이상 한글로 적어 주세요." };
+
+    /* 아이의 성 */
+    const surMode = document.querySelector('input[name="sur"]:checked').value;
+    let surname = "";
+    if (surMode === "dad") surname = dad ? dad.sur : "";
+    else if (surMode === "mom") surname = mom ? mom.sur : "";
+    else {
+      surname = $("surInput").value.replace(/\s+/g, "");
+      if (!surname) return { error: "아이의 성을 적어 주세요." };
+      for (const ch of surname) {
+        if (!isHangulSyllable(ch)) return { error: "성은 한글로 적어 주세요." };
+      }
+    }
+    if (!surname) {
+      return { error: "아이의 성을 골라 주세요. 이름을 적지 않으셨다면 직접 입력을 골라 주세요." };
+    }
 
     const script = document.querySelector('input[name="script"]:checked').value;
     const parents = parentSyllables();
@@ -819,7 +914,7 @@
       }
     }
 
-    const simil = Number($("simil").value);
+    const simil = parents.length ? Number($("simil").value) : 0;
 
     if (simil > 0 && !usable.length) {
       return {
@@ -839,9 +934,9 @@
 
     /* 성의 한자는 사전에 없을 수 있으니 한글 그대로 둔다 */
     return {
-      surname: dad.sur,
+      surname,
       surHanja: null,
-      key: historyKey($("dadName").value, $("momName").value),
+      key: historyKey(dadRaw + "/" + surname, momRaw),
       len,
       gender: document.querySelector('input[name="gender"]:checked').value,
       script,

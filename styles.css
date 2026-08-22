@@ -200,6 +200,7 @@ a { color: inherit; }
 
 .field { display: block; }
 .field__label { display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--muted); font-family: var(--font-sub); }
+.field__opt { font-style: normal; font-size: 0.78rem; color: var(--muted-dim); }
 
 input[type="text"], select {
   width: 100%;
@@ -318,6 +319,14 @@ input[type="range"]::-moz-range-thumb {
   font-style: normal; font-family: var(--font-sub);
   font-size: 0.72rem; font-weight: 400; color: var(--muted-dim);
 }
+/* 고를 수 없는 칸 — 이름을 안 적어 성을 따올 수 없을 때 */
+.opt.is-off { cursor: not-allowed; }
+.opt.is-off span { opacity: 0.42; }
+
+/* 닮음을 고를 수 없을 때(부모 이름 없음) */
+.step.is-off #simil { opacity: 0.4; cursor: not-allowed; }
+.step.is-off .simil__pct { opacity: 0.5; }
+
 .opt input:checked + span {
   border-color: rgba(245,197,66,0.6);
   background: rgba(245,197,66,0.11);
