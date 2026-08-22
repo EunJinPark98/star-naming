@@ -335,8 +335,6 @@
   document.querySelectorAll('input[name="sur"]').forEach((el) => {
     el.addEventListener("change", () => {
       surPicked = true;
-      $("surBox").hidden =
-        document.querySelector('input[name="sur"]:checked').value !== "custom";
     });
   });
 
@@ -347,27 +345,33 @@
   function syncSurnamePick() {
     const dad = splitName($("dadName").value);
     const mom = splitName($("momName").value);
-    const pairs = [["dad", dad, "surDad"], ["mom", mom, "surMom"]];
+    const pairs = [
+      ["dad", dad, "surDad", "surTickDad"],
+      ["mom", mom, "surMom", "surTickMom"],
+    ];
 
-    for (const [value, parsed, hintId] of pairs) {
+    for (const [value, parsed, surId, tickId] of pairs) {
       const input = document.querySelector('input[name="sur"][value="' + value + '"]');
-      const label = input.closest(".opt");
       input.disabled = !parsed;
-      label.classList.toggle("is-off", !parsed);
-      $(hintId).textContent = parsed ? parsed.sur : "이름을 적어 주세요";
+      $(tickId).classList.toggle("is-off", !parsed);
+      /* 이름을 적기 전에는 어떤 성이 될지 알 수 없다 */
+      $(surId).textContent = parsed ? " " + parsed.sur : "";
     }
 
+    /* 고를 수 없게 된 쪽을 고른 채로 두지 않는다. 직접 고르신 것은 그대로 둔다. */
     const cur = document.querySelector('input[name="sur"]:checked');
-    /* 고를 수 없게 됐거나, 이름이 없어 직접 입력으로 밀려나 있던 것이라면
-       이제 고를 수 있는 쪽으로 옮겨 준다. 직접 고르신 것은 그대로 둔다. */
-    const strayed = cur && (cur.disabled || (cur.value === "custom" && !surPicked));
-    if (strayed) {
-      const next =
-        (dad && document.querySelector('input[name="sur"][value="dad"]')) ||
-        (mom && document.querySelector('input[name="sur"][value="mom"]')) ||
-        document.querySelector('input[name="sur"][value="custom"]');
-      next.checked = true;
-      $("surBox").hidden = next.value !== "custom";
+    if (cur && cur.disabled) {
+      const other = cur.value === "dad" ? mom : dad;
+      if (other) {
+        document.querySelector(
+          'input[name="sur"][value="' + (cur.value === "dad" ? "mom" : "dad") + '"]'
+        ).checked = true;
+      }
+    } else if (!surPicked && dad) {
+      /* 아직 손대지 않았으면 적은 쪽을 기본으로 둔다 */
+      document.querySelector('input[name="sur"][value="dad"]').checked = true;
+    } else if (!surPicked && mom) {
+      document.querySelector('input[name="sur"][value="mom"]').checked = true;
     }
   }
 
@@ -869,21 +873,11 @@
     if (dadRaw && !dad) return { error: "아빠 이름을 두 글자 이상 한글로 적어 주세요." };
     if (momRaw && !mom) return { error: "엄마 이름을 두 글자 이상 한글로 적어 주세요." };
 
-    /* 아이의 성 */
+    /* 아이의 성 — 고른 쪽 이름에서 떼어 온다.
+       두 분 다 적지 않았으면 따올 성이 없으니 이름만 지어 준다. */
     const surMode = document.querySelector('input[name="sur"]:checked').value;
-    let surname = "";
-    if (surMode === "dad") surname = dad ? dad.sur : "";
-    else if (surMode === "mom") surname = mom ? mom.sur : "";
-    else {
-      surname = $("surInput").value.replace(/\s+/g, "");
-      if (!surname) return { error: "아이의 성을 적어 주세요." };
-      for (const ch of surname) {
-        if (!isHangulSyllable(ch)) return { error: "성은 한글로 적어 주세요." };
-      }
-    }
-    if (!surname) {
-      return { error: "아이의 성을 골라 주세요. 이름을 적지 않으셨다면 직접 입력을 골라 주세요." };
-    }
+    const surFrom = surMode === "mom" ? mom : dad;
+    const surname = surFrom ? surFrom.sur : (dad ? dad.sur : mom ? mom.sur : "");
 
     const script = document.querySelector('input[name="script"]:checked').value;
     const parents = parentSyllables();

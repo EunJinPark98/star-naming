@@ -17,13 +17,13 @@
 <meta property="og:site_name" content="별별 작명소" />
 <meta property="og:title" content="별별 작명소 — 엄마 아빠 이름으로 짓는 아기 이름" />
 <meta property="og:description" content="엄마 아빠 이름의 한자 뜻을 이어받아 아기 이름을 무료로 지어 드립니다. 한자 뜻풀이까지 함께요." />
-<meta property="og:image" content="https://naming.byeolmamapapa.com/assets/og-image.png" />
+<meta property="og:image" content="https://naming.byeolmamapapa.com/assets/og-image-v2.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:url" content="https://naming.byeolmamapapa.com/" />
 <meta property="og:locale" content="ko_KR" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:image" content="https://naming.byeolmamapapa.com/assets/og-image.png" />
+<meta name="twitter:image" content="https://naming.byeolmamapapa.com/assets/og-image-v2.png" />
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
@@ -139,18 +139,31 @@
     <section class="step">
       <h2 class="step__title"><span class="step__no">1</span> 엄마 아빠 이름</h2>
       <p class="step__hint">
-        적지 않으셔도 됩니다. 적으시면 그 이름에 담긴 뜻을 아이 이름에 이어 담아요.
+        적지 않으셔도 됩니다. 적으시면 그 이름에 담긴 뜻을 아이 이름에 이어 담고,
+        아래에서 <b>어느 쪽 성을 따를지</b> 고를 수 있어요.
       </p>
 
       <div class="grid2">
-        <label class="field">
-          <span class="field__label">아빠 이름 <em class="field__opt">(선택)</em></span>
-          <input type="text" id="dadName" placeholder="예) 김선일" maxlength="6" />
-        </label>
-        <label class="field">
-          <span class="field__label">엄마 이름 <em class="field__opt">(선택)</em></span>
-          <input type="text" id="momName" placeholder="예) 박은진" maxlength="6" />
-        </label>
+        <div class="pfield">
+          <label class="field">
+            <span class="field__label">아빠 이름 <em class="field__opt">(선택)</em></span>
+            <input type="text" id="dadName" placeholder="예) 김선일" maxlength="6" />
+          </label>
+          <label class="surtick" id="surTickDad">
+            <input type="radio" name="sur" value="dad" checked />
+            <span><i class="surtick__box" aria-hidden="true"></i>아이 성으로<b id="surDad"></b></span>
+          </label>
+        </div>
+        <div class="pfield">
+          <label class="field">
+            <span class="field__label">엄마 이름 <em class="field__opt">(선택)</em></span>
+            <input type="text" id="momName" placeholder="예) 박은진" maxlength="6" />
+          </label>
+          <label class="surtick" id="surTickMom">
+            <input type="radio" name="sur" value="mom" />
+            <span><i class="surtick__box" aria-hidden="true"></i>아이 성으로<b id="surMom"></b></span>
+          </label>
+        </div>
       </div>
 
       <div id="hanjaPick" class="hanja-pick" hidden>
@@ -159,28 +172,9 @@
       </div>
     </section>
 
-    <!-- 2. 아이의 성 -->
+    <!-- 2. 성별 · 표기 -->
     <section class="step">
-      <h2 class="step__title"><span class="step__no">2</span> 아이의 성(姓)</h2>
-      <p class="step__hint">어느 쪽 성을 따를지 골라 주세요.</p>
-
-      <div class="opts opts--3" role="radiogroup" aria-label="아이의 성">
-        <label class="opt"><input type="radio" name="sur" value="dad" checked /><span>아빠 성<em id="surDad">이름을 적어 주세요</em></span></label>
-        <label class="opt"><input type="radio" name="sur" value="mom" /><span>엄마 성<em id="surMom">이름을 적어 주세요</em></span></label>
-        <label class="opt"><input type="radio" name="sur" value="custom" /><span>직접 입력<em>남궁 · 황보도</em></span></label>
-      </div>
-
-      <div id="surBox" class="must-box" hidden>
-        <label class="field">
-          <span class="field__label">아이의 성</span>
-          <input type="text" id="surInput" placeholder="예) 김" maxlength="2" />
-        </label>
-      </div>
-    </section>
-
-    <!-- 3. 성별 · 표기 -->
-    <section class="step">
-      <h2 class="step__title"><span class="step__no">3</span> 성별</h2>
+      <h2 class="step__title"><span class="step__no">2</span> 성별</h2>
       <div class="opts opts--3" role="radiogroup" aria-label="성별">
         <label class="opt"><input type="radio" name="gender" value="M" /><span>남아</span></label>
         <label class="opt"><input type="radio" name="gender" value="F" /><span>여아</span></label>
@@ -189,7 +183,7 @@
     </section>
 
     <section class="step">
-      <h2 class="step__title"><span class="step__no">4</span> 이름 표기</h2>
+      <h2 class="step__title"><span class="step__no">3</span> 이름 표기</h2>
       <div class="opts" role="radiogroup" aria-label="이름 표기">
         <label class="opt"><input type="radio" name="script" value="hanja" checked /><span>한자 이름<em>뜻풀이까지</em></span></label>
         <label class="opt"><input type="radio" name="script" value="hangul" /><span>순우리말 이름<em>하늘 · 미르 · 다솜</em></span></label>
