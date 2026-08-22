@@ -329,27 +329,76 @@ input[type="range"]::-moz-range-thumb {
 
 .must-box { margin-top: 14px; }
 
-/* 더 자세히 고르기 */
-.more { border-top: 1px solid rgba(255,255,255,0.06); }
+/* 더 자세히 고르기 — 눌러 볼 것이 있다는 걸 한눈에 알도록 상자로 세운다 */
+.more { margin-top: 20px; }
 .more > summary {
-  position: relative;
-  padding: 18px 30px 18px 2px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 16px;
   cursor: pointer;
   list-style: none;
-  font-family: var(--font-sub);
-  font-size: 0.92rem;
-  color: var(--gold-2);
+  border: 1px solid rgba(245, 197, 66, 0.34);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(245,197,66,0.10), rgba(245,197,66,0.04));
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.more > summary:hover {
+  border-color: rgba(245, 197, 66, 0.6);
+  background: linear-gradient(180deg, rgba(245,197,66,0.16), rgba(245,197,66,0.06));
 }
 .more > summary::-webkit-details-marker { display: none; }
-.more > summary::after {
-  content: "▾";
-  position: absolute; right: 6px; top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.8rem;
-  transition: transform 0.2s ease;
+
+.more__icon {
+  flex: none;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: rgba(245, 197, 66, 0.16);
+  color: var(--gold-2);
+  font-size: 0.82rem;
 }
-.more[open] > summary::after { transform: translateY(-50%) rotate(180deg); }
-.more[open] > summary { color: var(--gold-1); }
+.more__text {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-brand);
+  font-size: 1.02rem;
+  color: var(--gold-1);
+}
+.more__text em {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-sub);
+  font-style: normal;
+  font-size: 0.76rem;
+  color: var(--muted-dim);
+}
+.more__chev {
+  flex: none;
+  width: 9px; height: 9px;
+  border-right: 2px solid var(--gold-2);
+  border-bottom: 2px solid var(--gold-2);
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 0.22s ease;
+}
+.more[open] > summary {
+  border-color: rgba(245, 197, 66, 0.5);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.more[open] .more__chev { transform: translateY(1px) rotate(-135deg); }
+/* 펼치면 상자가 아래 내용까지 이어지도록 테두리를 둘러 준다 */
+.more[open] > summary ~ .step {
+  border-left: 1px solid rgba(245, 197, 66, 0.2);
+  border-right: 1px solid rgba(245, 197, 66, 0.2);
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.more[open] > summary ~ .step:last-of-type {
+  border-bottom: 1px solid rgba(245, 197, 66, 0.2);
+  border-radius: 0 0 14px 14px;
+  padding-bottom: 18px;
+}
 .more .step { padding-top: 4px; }
 .more .step:first-of-type { border-top: 0; }
 .more .step__title { font-size: 1rem; }

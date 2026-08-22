@@ -359,9 +359,17 @@
 
   function syncSimil() {
     const v = Number($("simil").value);
+    const len = Number(document.querySelector('input[name="len"]:checked').value);
     $("similPct").textContent = v + "%";
-    $("similDesc").textContent = SIMIL_PLAN[v].desc;
+    /* 외자는 자리가 하나뿐이라 두 분에게서 한 글자씩 받을 수 없다 */
+    $("similDesc").textContent =
+      len === 1 && v === 100
+        ? "외자는 자리가 하나예요. 두 분 중 한 분의 글자를 그대로 가져옵니다."
+        : SIMIL_PLAN[v].desc;
   }
+  document.querySelectorAll('input[name="len"]').forEach((el) =>
+    el.addEventListener("change", syncSimil)
+  );
   $("simil").addEventListener("input", syncSimil);
   syncSimil();
 
@@ -371,35 +379,8 @@
     el.addEventListener("change", () => {
       const v = document.querySelector('input[name="must"]:checked').value;
       $("mustChar").hidden = v !== "char";
-      $("mustCho").hidden = v !== "cho";
     });
   });
-
-  /* 초성 고르기 채우기 */
-  [$("cho1"), $("cho2")].forEach((sel) => {
-    const none = document.createElement("option");
-    none.value = "";
-    none.textContent = "고르지 않음";
-    sel.append(none);
-    CHOSUNG_PICKABLE.forEach((c) => {
-      const o = document.createElement("option");
-      o.value = c;
-      o.textContent = c;
-      sel.append(o);
-    });
-  });
-
-  /* 이름 자수가 두 글자면 셋째 글자 초성은 의미가 없다 */
-  function syncChoLabels() {
-    const len = Number(document.querySelector('input[name="len"]:checked').value);
-    const labels = $("mustCho").querySelectorAll(".field__label");
-    labels[0].textContent = "첫 글자 초성";
-    labels[1].textContent = len === 3 ? "둘째 또는 셋째 글자 초성" : "둘째 글자 초성";
-  }
-  document.querySelectorAll('input[name="len"]').forEach((el) =>
-    el.addEventListener("change", syncChoLabels)
-  );
-  syncChoLabels();
 
   /* ── 이름 짓기 ────────────────────────────── */
 
@@ -422,7 +403,6 @@
       if (x.n.length !== o.len) return false;
       if (o.gender !== "N" && x.g !== "N" && x.g !== o.gender) return false;
       if (o.mustChar && !x.n.includes(o.mustChar)) return false;
-      if (!choOk(x.n, o.cho1, o.cho2)) return false;
       if (blocked(o.surname, x.n)) return false;
       if (o.exclude.has(o.surname + x.n)) return false;
       return true;
@@ -457,6 +437,8 @@
     if (!d) return true;
     const p = d.p;
     if (p === "b") return true;
+    /* 외자는 첫 글자이면서 끝 글자라, 앞자리/끝자리를 가리면 아무것도 남지 않는다 */
+    if (len === 1) return true;
     if (i === 0) return p === "1";
     if (i === len - 1) return p === "2";
     return true; // 세 글자 이름의 가운데는 가리지 않는다
@@ -468,17 +450,6 @@
       if (given.includes(bad) || full.includes(bad)) return true;
     }
     return false;
-  }
-
-  function choOk(given, c1, c2) {
-    if (c1) {
-      if (chosungOf(given[0]) !== c1) return false;
-    }
-    if (c2) {
-      const rest = [...given].slice(1).map(chosungOf);
-      if (!rest.includes(c2)) return false;
-    }
-    return true;
   }
 
   /**
@@ -607,7 +578,6 @@
       seen.add(given);
 
       if (o.mustChar && !given.includes(o.mustChar)) continue;
-      if (!choOk(given, o.cho1, o.cho2)) continue;
       if (blocked(o.surname, given)) continue;
 
       const full = o.surname + given;
@@ -635,6 +605,12 @@
     if (h.some((x) => !x || x.m === "뜻 모름")) return "";
     const last = h[h.length - 1];
     const head = CONCRETE.has(last.m);
+
+    /* 외자는 꾸밀 앞글자가 없다. 손에 잡히는 뜻이면 그대로,
+       아니면 "아이"를 받쳐 이름씨로 만든다. */
+    if (h.length === 1) {
+      return head ? last.m : last.a + " 아이";
+    }
 
     if (h.length === 2) {
       return head ? h[0].a + " " + last.m : h[0].j + " " + last.a + " 아이";
@@ -822,8 +798,6 @@
 
     const mustMode = document.querySelector('input[name="must"]:checked').value;
     let mustChar = "";
-    let cho1 = "";
-    let cho2 = "";
 
     if (mustMode === "char") {
       mustChar = $("mustCharInput").value.trim();
@@ -843,10 +817,6 @@
           error: why + '이름 표기를 "순우리말 이름"으로 바꾸면 그대로 넣어 드릴게요.',
         };
       }
-    } else if (mustMode === "cho") {
-      cho1 = $("cho1").value;
-      cho2 = $("cho2").value;
-      if (!cho1 && !cho2) return { error: "초성을 하나 이상 골라 주세요." };
     }
 
     const simil = Number($("simil").value);
@@ -859,7 +829,9 @@
             : "두 분 이름을 다시 확인해 주세요.",
       };
     }
-    if (simil === 100 && new Set(usable.map((p) => p.who)).size < 2) {
+    const len = Number(document.querySelector('input[name="len"]:checked').value);
+
+    if (len > 1 && simil === 100 && new Set(usable.map((p) => p.who)).size < 2) {
       return {
         error: "닮음 100%는 아빠·엄마 이름에서 각각 한 글자씩 가져와요. 닮음을 조금 낮춰 주세요.",
       };
@@ -870,13 +842,11 @@
       surname: dad.sur,
       surHanja: null,
       key: historyKey($("dadName").value, $("momName").value),
-      len: Number(document.querySelector('input[name="len"]:checked').value),
+      len,
       gender: document.querySelector('input[name="gender"]:checked').value,
       script,
       simil,
       mustChar,
-      cho1,
-      cho2,
       parents,
       exclude: shown,
     };
@@ -902,10 +872,27 @@
           return;
         }
 
-        /* 마지막으로 보여 준 이름은 그대로 두고 알림만 얹는다 */
-        if (current) openModal(current.result, current.opts);
-        else $("modal").hidden = false;
+        /* 보여 줄 이름이 화면에 없으면(다시 들어와 지은 첫 판) 빈 창이 뜬다.
+           막다른 길이 되지 않게 기억을 비우고 곧바로 다시 지어 준다. */
+        if (!current) {
+          const many = shown.size;
+          clearShown(shownKey);
+          shown = new Set();
+          opts.exclude = shown;
+          const again = buildName(opts);
+          if (!again) {
+            showError("이 조건에 맞는 이름을 찾지 못했어요. 조건을 조금 풀어 주세요.");
+            return;
+          }
+          shown.add(again.full);
+          writeShown(opts.key, shown);
+          openModal(again, opts);
+          toast("이 조건의 이름 " + many + "개를 모두 보여 드려서, 처음부터 다시 보여 드려요.");
+          return;
+        }
 
+        /* 마지막으로 보여 준 이름은 그대로 두고 알림만 얹는다 */
+        openModal(current.result, current.opts);
         $("modalNote").textContent =
           "지어 드릴 수 있는 이름 " + shown.size + "개를 모두 보여 드렸어요. " +
           "조건을 바꾸거나, 처음부터 다시 보실 수 있어요.";
