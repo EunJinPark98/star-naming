@@ -435,7 +435,7 @@
       if (!slider.disabled) similHeld = slider.value;
       slider.value = "0";
       slider.disabled = true;
-      $("simil").closest(".step").classList.add("is-off");
+      $("simil").closest(".simil-block").classList.add("is-off");
       $("similPct").textContent = "0%";
       $("similDesc").textContent = "엄마 아빠 이름을 적어주세요.";
       return;
@@ -445,7 +445,7 @@
       slider.value = similHeld;
       slider.disabled = false;
     }
-    $("simil").closest(".step").classList.remove("is-off");
+    $("simil").closest(".simil-block").classList.remove("is-off");
 
     const v = Number(slider.value);
     const len = Number(document.querySelector('input[name="len"]:checked').value);
@@ -463,6 +463,50 @@
   /* 첫 화면은 이름이 비어 있으니 성 고르기와 닮음도 그에 맞춰 둔다 */
   syncSurnamePick();
   syncSimil();
+
+  /* ── 원하는 초성 ──────────────────────────── */
+
+  /** 지금 그려 둔 초성 선택 상자 (이름 자리 순서대로) */
+  let chosungSelects = [];
+
+  function renderChosungPicks() {
+    const len = Number(document.querySelector('input[name="len"]:checked').value);
+    const box = $("chosungPicks");
+    const prev = chosungSelects.map((s) => s.value);
+
+    box.innerHTML = "";
+    chosungSelects = [];
+
+    for (let i = 0; i < len; i++) {
+      const field = document.createElement("label");
+      field.className = "field chosung-field";
+
+      const label = document.createElement("span");
+      label.className = "field__label";
+      label.textContent = (i + 1) + "번째 글자";
+
+      const sel = document.createElement("select");
+      const any = document.createElement("option");
+      any.value = "";
+      any.textContent = "상관없음";
+      sel.append(any);
+      CHOSUNG_PICKABLE.forEach((c) => {
+        const o = document.createElement("option");
+        o.value = c;
+        o.textContent = c;
+        sel.append(o);
+      });
+      if (prev[i]) sel.value = prev[i];
+
+      field.append(label, sel);
+      box.append(field);
+      chosungSelects.push(sel);
+    }
+  }
+  document.querySelectorAll('input[name="len"]').forEach((el) =>
+    el.addEventListener("change", renderChosungPicks)
+  );
+  renderChosungPicks();
 
   /* ── 조건 칸 여닫기 ───────────────────────── */
 
@@ -494,6 +538,7 @@
       if (x.n.length !== o.len) return false;
       if (o.gender !== "N" && x.g !== "N" && x.g !== o.gender) return false;
       if (o.mustChar && !x.n.includes(o.mustChar)) return false;
+      if (!chosungMatchAll(x.n, o.chosung)) return false;
       if (blocked(o.surname, x.n)) return false;
       if (o.exclude.has(o.surname + x.n)) return false;
       return true;
@@ -521,6 +566,17 @@
     const d = info(syl);
     if (!d) return true; // 사전에 없는 글자는 가리지 않는다
     return d.g === "N" || d.g === want;
+  }
+
+  /** 그 자리에 원하는 초성을 골라 두지 않았거나, 골라 둔 초성과 같으면 된다. */
+  function chosungOk(syl, i, chosung) {
+    const want = chosung && chosung[i];
+    if (!want) return true;
+    return chosungOf(syl) === want;
+  }
+
+  function chosungMatchAll(str, chosung) {
+    return [...str].every((c, i) => chosungOk(c, i, chosung));
   }
 
   function posOk(syl, i, len) {
@@ -616,7 +672,9 @@
         let ok = true;
         picked.forEach((p, i) => {
           const spot = spots[i];
-          if (!keep.pos || posOk(p.syl, spot, o.len)) {
+          const posGood = !keep.pos || posOk(p.syl, spot, o.len);
+          const chosungGood = chosungOk(p.syl, spot, o.chosung);
+          if (posGood && chosungGood) {
             slots[spot] = { syl: p.syl, hanja: p.hanja, from: p.who };
             used.add(p.syl);
           } else {
@@ -636,6 +694,7 @@
           if (used.has(s)) return false;
           if (keep.gender && !genderOk(s, o.gender)) return false;
           if (keep.pos && !posOk(s, i, o.len)) return false;
+          if (!chosungOk(s, i, o.chosung)) return false;
           if (tagLeft > 0 && !(SYL[s] && SYL[s].h.some((h) => parentTags.includes(h.t)))) return false;
           return true;
         });
@@ -928,6 +987,7 @@
       };
     }
     const len = Number(document.querySelector('input[name="len"]:checked').value);
+    const chosung = chosungSelects.slice(0, len).map((s) => s.value);
 
     if (len > 1 && simil === 100 && new Set(usable.map((p) => p.who)).size < 2) {
       return {
@@ -945,6 +1005,7 @@
       script,
       simil,
       mustChar,
+      chosung,
       parents,
       exclude: shown,
     };

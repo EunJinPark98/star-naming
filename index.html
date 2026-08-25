@@ -161,6 +161,15 @@
         <p class="step__hint">두 분 이름 글자의 한자 뜻을 골라 주세요. 아이 이름에 그 뜻을 이어 담습니다.</p>
         <div id="hanjaRows" class="hanja-rows"></div>
       </div>
+
+      <div id="similBlock" class="simil-block">
+        <h3 class="step__title">부모 이름과 얼마나 닮게 할까요?</h3>
+        <input type="range" id="simil" min="0" max="100" step="25" value="50" />
+        <div class="simil">
+          <output id="similPct" class="simil__pct">50%</output>
+          <p id="similDesc" class="simil__desc">부모님 이름에서 한 글자를 그대로 가져옵니다.</p>
+        </div>
+      </div>
     </section>
 
     <!-- 2. 성별 · 표기 -->
@@ -192,15 +201,6 @@
       </summary>
 
       <section class="step">
-        <h3 class="step__title">부모 이름과 얼마나 닮게 할까요?</h3>
-        <input type="range" id="simil" min="0" max="100" step="25" value="50" />
-        <div class="simil">
-          <output id="similPct" class="simil__pct">50%</output>
-          <p id="similDesc" class="simil__desc">부모님 이름에서 한 글자를 그대로 가져옵니다.</p>
-        </div>
-      </section>
-
-      <section class="step">
         <h3 class="step__title">이름 자수</h3>
         <p class="step__hint">성을 뺀 이름의 글자 수입니다.</p>
         <div class="opts opts--3" role="radiogroup" aria-label="이름 자수">
@@ -208,6 +208,12 @@
           <label class="opt"><input type="radio" name="len" value="2" checked /><span>두 글자<em>예) 한별</em></span></label>
           <label class="opt"><input type="radio" name="len" value="3" /><span>세 글자<em>예) 한아름</em></span></label>
         </div>
+      </section>
+
+      <section class="step">
+        <h3 class="step__title">원하는 초성</h3>
+        <p class="step__hint">이름 자리마다 원하는 초성을 고를 수 있어요. 비워 두면 상관없이 짓습니다.</p>
+        <div id="chosungPicks" class="chosung-picks"></div>
       </section>
 
       <section class="step">

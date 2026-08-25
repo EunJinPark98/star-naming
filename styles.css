@@ -316,6 +316,8 @@ select option { background: #12131c; color: var(--text); }
 
 /* ── 유사도 ───────────────────────────────────── */
 
+.simil-block { margin-top: 20px; padding-top: 18px; border-top: 1px dashed rgba(245,197,66,0.2); }
+
 input[type="range"] {
   width: 100%;
   appearance: none;
@@ -366,8 +368,13 @@ input[type="range"]::-moz-range-thumb {
   font-size: 0.72rem; font-weight: 400; color: var(--muted-dim);
 }
 /* 닮음을 고를 수 없을 때(부모 이름 없음) */
-.step.is-off #simil { opacity: 0.4; cursor: not-allowed; }
-.step.is-off .simil__pct { opacity: 0.5; }
+.simil-block.is-off #simil { opacity: 0.4; cursor: not-allowed; }
+.simil-block.is-off .simil__pct { opacity: 0.5; }
+
+/* ── 초성 고르기 ──────────────────────────────── */
+
+.chosung-picks { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.chosung-field { flex: 1 1 90px; min-width: 90px; }
 
 .opt input:checked + span {
   border-color: rgba(245,197,66,0.6);
