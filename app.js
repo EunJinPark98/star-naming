@@ -232,20 +232,29 @@
 
     const add = (who, parsed) => {
       if (!parsed) return;
+
+      const group = document.createElement("div");
+      group.className = "hgroup";
+
+      const label = document.createElement("p");
+      label.className = "hgroup__label";
+      label.textContent = who;
+      group.append(label);
+
+      const line = document.createElement("div");
+      line.className = "hgroup__row";
+      group.append(line);
+
       [...parsed.given].forEach((syl, i) => {
         const entry = SYL[syl];
         const row = document.createElement("div");
         row.className = "hrow";
 
-        const label = document.createElement("span");
-        label.className = "hrow__who";
-        label.textContent = who;
-
         const chip = document.createElement("span");
         chip.className = "hrow__syl";
         chip.textContent = syl;
 
-        row.append(label, chip);
+        row.append(chip);
 
         const sel = document.createElement("select");
         if (entry) {
@@ -313,10 +322,12 @@
         custom.addEventListener("input", syncNote);
 
         row.append(sel, custom, note);
-        rows.append(row);
+        line.append(row);
 
         hanjaRows.push({ who, syl, idx: i, sel, custom, has: !!entry });
       });
+
+      rows.append(group);
     };
 
     add("아빠", dad);
@@ -426,9 +437,7 @@
       slider.disabled = true;
       $("simil").closest(".step").classList.add("is-off");
       $("similPct").textContent = "0%";
-      $("similDesc").textContent =
-        "엄마 아빠 이름을 적지 않으셔서, 이름을 새로 지어 드립니다. " +
-        "두 분 이름을 적으시면 닮음 정도를 고를 수 있어요.";
+      $("similDesc").textContent = "엄마 아빠 이름을 적어주세요.";
       return;
     }
 
