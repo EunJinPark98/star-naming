@@ -466,8 +466,55 @@
 
   /* ── 원하는 초성 ──────────────────────────── */
 
+  /** 아이 이름 후보로 쓸 한자 글자. 부모님 세대 글자(o)는 뺀다. */
+  const POOL_HANJA = Object.keys(SYL).filter((s) => !SYL[s].o);
+
+  /** 글자 정보. 한자 사전에 없으면 순우리말 사전에서 찾는다. */
+  const info = (syl) => SYL[syl] || PURE[syl] || null;
+
+  /**
+   * 그 자리를 이 초성으로 두고도 지을 이름이 남는지 본다.
+   *
+   * 지을 수 없는 초성을 고르면 "이름이 없어요"로 끝나 버리니,
+   * 아예 고르지 못하게 막아 둔다. picked 는 다른 자리에서 이미 고른 초성이라,
+   * 순우리말처럼 이름을 통째로 골라 오는 쪽은 짝이 맞는지까지 본다.
+   *
+   * 한자 이름은 자리·성별을 놓아 가며 다시 찾고 자리마다 글자를 따로
+   * 고르므로, 그 소리를 적는 글자가 하나라도 있으면 지을 수 있다.
+   */
+  function chosungAvailable(c, i, picked, len, script, gender) {
+    if (script !== "hangul") return POOL_HANJA.some((s) => chosungOf(s) === c);
+    return PURE_NAMES.some((x) => {
+      if (x.n.length !== len) return false;
+      if (gender !== "N" && x.g !== "N" && x.g !== gender) return false;
+      if (chosungOf(x.n[i]) !== c) return false;
+      return picked.every((p, j) => j === i || !p || chosungOf(x.n[j]) === p);
+    });
+  }
+
   /** 지금 그려 둔 초성 선택 상자 (이름 자리 순서대로) */
   let chosungSelects = [];
+
+  /** 고를 수 없게 된 초성을 잠그고, 골라 둔 것이 막히면 '상관없음'으로 되돌린다 */
+  function syncChosungOptions() {
+    const len = chosungSelects.length;
+    const script = document.querySelector('input[name="script"]:checked').value;
+    const gender = document.querySelector('input[name="gender"]:checked').value;
+    const picked = chosungSelects.map((s) => s.value);
+
+    chosungSelects.forEach((sel, i) => {
+      /* 이 자리 값은 스스로를 막지 않도록 빼고 본다 */
+      for (const o of sel.options) {
+        if (!o.value) continue;
+        o.disabled = !chosungAvailable(o.value, i, picked, len, script, gender);
+        o.textContent = o.disabled ? o.value + " (없음)" : o.value;
+      }
+      if (sel.value && sel.selectedOptions[0] && sel.selectedOptions[0].disabled) {
+        sel.value = "";
+        picked[i] = "";
+      }
+    });
+  }
 
   function renderChosungPicks() {
     const len = Number(document.querySelector('input[name="len"]:checked').value);
@@ -497,15 +544,20 @@
         sel.append(o);
       });
       if (prev[i]) sel.value = prev[i];
+      sel.addEventListener("change", syncChosungOptions);
 
       field.append(label, sel);
       box.append(field);
       chosungSelects.push(sel);
     }
+    syncChosungOptions();
   }
-  document.querySelectorAll('input[name="len"]').forEach((el) =>
-    el.addEventListener("change", renderChosungPicks)
-  );
+  document
+    .querySelectorAll('input[name="len"]')
+    .forEach((el) => el.addEventListener("change", renderChosungPicks));
+  document
+    .querySelectorAll('input[name="script"], input[name="gender"]')
+    .forEach((el) => el.addEventListener("change", syncChosungOptions));
   renderChosungPicks();
 
   /* ── 조건 칸 여닫기 ───────────────────────── */
@@ -518,12 +570,6 @@
   });
 
   /* ── 이름 짓기 ────────────────────────────── */
-
-  /** 아이 이름 후보로 쓸 한자 글자. 부모님 세대 글자(o)는 뺀다. */
-  const POOL_HANJA = Object.keys(SYL).filter((s) => !SYL[s].o);
-
-  /** 글자 정보. 한자 사전에 없으면 순우리말 사전에서 찾는다. */
-  const info = (syl) => SYL[syl] || PURE[syl] || null;
 
   /**
    * 순우리말 이름 고르기.
