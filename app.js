@@ -938,10 +938,12 @@
 
     if (opts.script === "hangul") {
       /* 순우리말 이름은 한자가 없다. 뜻은 목록에 담아 둔 그대로 보여 준다. */
+      $("modalTag").hidden = false;
       hanjaEl.textContent = "";
       charsEl.innerHTML = "";
       meaningEl.textContent = result.pure ? result.pure.d : "";
     } else {
+      $("modalTag").hidden = true;
       hanjaEl.textContent = result.slots.map((s) => s.hanja.c).join("");
       charsEl.innerHTML = readingOf(result.slots, opts.script);
       meaningEl.textContent = meaningOf(result.slots);
