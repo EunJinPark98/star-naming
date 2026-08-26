@@ -578,7 +578,11 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 18px;
   background: linear-gradient(160deg, rgba(245,197,66,0.06), rgba(255,255,255,0.015) 45%), rgba(10,12,22,0.6);
   text-align: center;
+  display: flex;
+  flex-direction: column;
 }
+/* 카드마다 담는 줄 수가 달라도 뜻 위의 선은 같은 자리에 오도록 */
+.sample__head { flex: 1 1 auto; }
 .sample__name {
   margin: 0;
   font-family: var(--font-brand);
