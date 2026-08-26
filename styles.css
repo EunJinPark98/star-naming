@@ -269,13 +269,8 @@ select option { background: #12131c; color: var(--text); }
 
 /* ── 한자 고르기 ──────────────────────────────── */
 
-.hanja-pick { margin-top: 20px; padding-top: 18px; border-top: 1px dashed rgba(245,197,66,0.2); }
-.hanja-rows { display: flex; flex-direction: column; gap: 18px; }
+.hanja-pick { margin-top: 16px; padding-top: 14px; border-top: 1px dashed rgba(245,197,66,0.2); }
 
-.hgroup__label {
-  margin: 0 0 8px;
-  font-family: var(--font-sub); font-size: 0.78rem; color: var(--muted-dim);
-}
 .hgroup__row { display: flex; flex-wrap: wrap; gap: 10px 12px; }
 
 .hrow {

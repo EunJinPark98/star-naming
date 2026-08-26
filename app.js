@@ -211,15 +211,6 @@
   function renderHanjaPick() {
     const dad = splitName($("dadName").value);
     const mom = splitName($("momName").value);
-    const box = $("hanjaPick");
-    const rows = $("hanjaRows");
-
-    if (!dad && !mom) {
-      box.hidden = true;
-      rows.innerHTML = "";
-      hanjaRows = [];
-      return;
-    }
 
     /* 이미 고른 값은 다시 그려도 유지한다 */
     const prev = {};
@@ -227,23 +218,11 @@
       prev[r.who + r.syl + r.idx] = { v: r.sel.value, c: r.custom ? r.custom.value : "" };
     }
 
-    rows.innerHTML = "";
     hanjaRows = [];
 
-    const add = (who, parsed) => {
-      if (!parsed) return;
-
-      const group = document.createElement("div");
-      group.className = "hgroup";
-
-      const label = document.createElement("p");
-      label.className = "hgroup__label";
-      label.textContent = who;
-      group.append(label);
-
-      const line = document.createElement("div");
-      line.className = "hgroup__row";
-      group.append(line);
+    const build = (who, parsed, line) => {
+      line.innerHTML = "";
+      if (!parsed) return false;
 
       [...parsed.given].forEach((syl, i) => {
         const entry = SYL[syl];
@@ -265,6 +244,11 @@
             sel.append(o);
           });
         }
+        const none = document.createElement("option");
+        none.value = "none";
+        none.textContent = "한글 이름 (한자 없음)";
+        sel.append(none);
+
         const own = document.createElement("option");
         own.value = "custom";
         own.textContent = entry ? "✎ 직접 입력" : "✎ 직접 입력 (사전에 없는 글자)";
@@ -327,12 +311,11 @@
         hanjaRows.push({ who, syl, idx: i, sel, custom, has: !!entry });
       });
 
-      rows.append(group);
+      return true;
     };
 
-    add("아빠", dad);
-    add("엄마", mom);
-    box.hidden = hanjaRows.length === 0;
+    $("hanjaPickDad").hidden = !build("아빠", dad, $("hanjaRowsDad"));
+    $("hanjaPickMom").hidden = !build("엄마", mom, $("hanjaRowsMom"));
   }
 
   $("dadName").addEventListener("input", onNamesChanged);
@@ -405,7 +388,7 @@
         hanja = parseCustom(r.custom.value, r.syl);
         /* 한자도 뜻도 안 적었으면 소리만 물려준다 */
         if (hanja && !hanja.c && hanja.m === "뜻 모름") hanja = null;
-      } else if (r.has) {
+      } else if (r.sel.value !== "none" && r.has) {
         hanja = SYL[r.syl].h[Number(r.sel.value) || 0];
       }
       return { who: r.who, syl: r.syl, hanja };

@@ -144,6 +144,11 @@
             <input type="radio" name="sur" value="dad" checked />
             <span><i class="surtick__box" aria-hidden="true"></i>아빠 성 따르기<b id="surDad"></b></span>
           </label>
+
+          <div id="hanjaPickDad" class="hanja-pick" hidden>
+            <p class="step__hint">이름 글자의 한자 뜻을 골라 주세요.</p>
+            <div id="hanjaRowsDad" class="hgroup__row"></div>
+          </div>
         </div>
         <div class="pfield">
           <label class="field">
@@ -154,12 +159,12 @@
             <input type="radio" name="sur" value="mom" />
             <span><i class="surtick__box" aria-hidden="true"></i>엄마 성 따르기<b id="surMom"></b></span>
           </label>
-        </div>
-      </div>
 
-      <div id="hanjaPick" class="hanja-pick" hidden>
-        <p class="step__hint">두 분 이름 글자의 한자 뜻을 골라 주세요. 아이 이름에 그 뜻을 이어 담습니다.</p>
-        <div id="hanjaRows" class="hanja-rows"></div>
+          <div id="hanjaPickMom" class="hanja-pick" hidden>
+            <p class="step__hint">이름 글자의 한자 뜻을 골라 주세요.</p>
+            <div id="hanjaRowsMom" class="hgroup__row"></div>
+          </div>
+        </div>
       </div>
 
       <div id="similBlock" class="simil-block">
