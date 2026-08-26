@@ -731,7 +731,7 @@ input[type="range"]::-moz-range-thumb {
 
 .modal__tag {
   display: inline-block;
-  margin: 10px auto 0;
+  margin: 8px auto 0;
   padding: 3px 12px;
   border: 1px solid rgba(245,197,66,0.4);
   border-radius: 999px;
