@@ -1189,8 +1189,15 @@
           objectType: "feed",
           content: {
             title: "별별 작명소 ✦ " + current.result.full,
-            description: current.opts.script === "hanja" ? meaningOf(current.result.slots) : "엄마 아빠 이름으로 지은 아이 이름",
-            imageUrl: new URL("assets/og-image.png", location.href).href,
+            description:
+              current.opts.script === "hanja"
+                ? meaningOf(current.result.slots)
+                : current.result.pure
+                ? current.result.pure.d
+                : "엄마 아빠 이름으로 지은 아이 이름",
+            imageUrl: new URL("assets/og-image-v3.png", location.href).href,
+            imageWidth: 1200,
+            imageHeight: 630,
             link: { mobileWebUrl: url, webUrl: url },
           },
           buttons: [
