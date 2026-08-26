@@ -9,8 +9,9 @@
   "use strict";
 
   /* 카카오 JavaScript 키. 넣으면 카톡 공유가 카카오톡으로 바로 열린다.
-     비워 두면 링크 복사·공유하기로 대신한다. */
-  const KAKAO_JS_KEY = "";
+     비워 두면 링크 복사·공유하기로 대신한다.
+     (JavaScript 키는 카카오 개발자센터에 등록한 도메인에서만 쓰이는 공개 키다) */
+  const KAKAO_JS_KEY = "a5b1b59ffa0ac623d2e69239c53cc6bc";
 
   const $ = (id) => document.getElementById(id);
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
