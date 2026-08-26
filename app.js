@@ -582,7 +582,9 @@
       if (o.gender !== "N" && x.g !== "N" && x.g !== o.gender) return false;
       if (o.mustChar && !x.n.includes(o.mustChar)) return false;
       if (!chosungMatchAll(x.n, o.chosung)) return false;
-      if (blocked(o.surname, x.n)) return false;
+      /* BLOCKED 는 글자를 짜맞추다 나온 뜻밖의 말을 거르려는 것이라,
+         통째로 손질해 담아 둔 순우리말 이름에는 대지 않는다.
+         (은하수의 "하수"처럼 멀쩡한 이름이 애먼 데서 걸린다) */
       if (o.exclude.has(o.surname + x.n)) return false;
       return true;
     });
