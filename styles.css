@@ -196,7 +196,14 @@ a { color: inherit; }
 .step__hint { margin: 0 0 14px; color: var(--muted-dim); font-family: var(--font-sub); font-size: 0.87rem; }
 
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 460px) { .grid2 { grid-template-columns: 1fr; } }
+@media (max-width: 460px) {
+  .grid2 { grid-template-columns: 1fr; }
+  .grid2 .pfield + .pfield {
+    margin-top: 6px;
+    padding-top: 20px;
+    border-top: 1px dashed rgba(245,197,66,0.2);
+  }
+}
 
 .field { display: block; }
 .field__label { display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--muted); font-family: var(--font-sub); }
@@ -269,7 +276,7 @@ select option { background: #12131c; color: var(--text); }
 
 /* ── 한자 고르기 ──────────────────────────────── */
 
-.hanja-pick { margin-top: 16px; padding-top: 14px; border-top: 1px dashed rgba(245,197,66,0.2); }
+.hanja-pick { margin-top: 16px; }
 
 .hgroup__row { display: flex; flex-wrap: wrap; gap: 10px 12px; }
 
