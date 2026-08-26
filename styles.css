@@ -579,17 +579,22 @@ input[type="range"]::-moz-range-thumb {
   background: linear-gradient(160deg, rgba(245,197,66,0.06), rgba(255,255,255,0.015) 45%), rgba(10,12,22,0.6);
   text-align: center;
 }
-.sample__hanja {
+.sample__name {
   margin: 0;
   font-family: var(--font-brand);
   font-size: 2rem; font-weight: 700; letter-spacing: 0.1em;
   background: linear-gradient(180deg, var(--gold-1), var(--gold-3));
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.sample__name { margin: 2px 0 0; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.04em; }
+.sample__hanja {
+  margin: 4px 0 0;
+  font-family: var(--font-brand);
+  font-size: 1.1rem; font-weight: 600; letter-spacing: 0.08em;
+  color: var(--muted);
+}
 .sample__chars {
   display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px;
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   font-family: var(--font-sub); font-size: 0.82rem; color: var(--muted-dim);
 }
 .sample__chars i { font-style: normal; font-family: var(--font-brand); color: var(--gold-2); }
@@ -800,7 +805,7 @@ input[type="range"]::-moz-range-thumb {
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px 18px;
-  margin: 18px 0 0;
+  margin: 8px 0 0;
 }
 .modal__chars:empty { display: none; }
 .modal__chars .ch {
