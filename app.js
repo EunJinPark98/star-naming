@@ -951,14 +951,23 @@
 
     $("modalName").textContent = result.full;
 
-    $("modalNote").textContent = "";
-    $("resetBtn").hidden = true;
+    $("modalResult").hidden = false;
+    $("modalExhausted").hidden = true;
     $("againBtn").disabled = false;
     $("modal").hidden = false;
   }
 
   function closeModal() {
     $("modal").hidden = true;
+  }
+
+  /** 더 지어 드릴 이름이 남지 않았을 때, 이름 없이 안내만 단독으로 보여 준다. */
+  function showExhausted(msg) {
+    current = null;
+    $("modalResult").hidden = true;
+    $("modalExhausted").hidden = false;
+    $("modalExhaustedText").textContent = msg;
+    $("modal").hidden = false;
   }
 
   document.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeModal));
@@ -1098,13 +1107,11 @@
           return;
         }
 
-        /* 마지막으로 보여 준 이름은 그대로 두고 알림만 얹는다 */
-        openModal(current.result, current.opts);
-        $("modalNote").textContent =
+        /* 더 지어 드릴 이름이 없다. 이름 없이 안내만 단독으로 보여 준다. */
+        showExhausted(
           "지어 드릴 수 있는 이름 " + shown.size + "개를 모두 보여 드렸어요. " +
-          "조건을 바꾸거나, 처음부터 다시 보실 수 있어요.";
-        $("resetBtn").hidden = false;
-        $("againBtn").disabled = true;
+          "확인을 누르면 지금까지 본 이름을 지우고 처음부터 다시 지어 드려요."
+        );
         return;
       }
 
@@ -1145,13 +1152,11 @@
     run(lastOpts, true);
   });
 
-  $("resetBtn").addEventListener("click", () => {
-    if (!lastOpts) return;
-    clearShown(shownKey);
+  $("exhaustedOkBtn").addEventListener("click", () => {
+    if (shownKey) clearShown(shownKey);
     shown = new Set();
-    lastOpts.exclude = shown;
+    if (lastOpts) lastOpts.exclude = shown;
     $("modal").hidden = true;
-    run(lastOpts, true);
   });
 
   /* ── 공유 ─────────────────────────────────── */

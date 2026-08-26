@@ -340,32 +340,37 @@
   <div class="modal__box">
     <button type="button" class="modal__x" data-close aria-label="닫기">✕</button>
 
-    <p class="modal__tada">짜잔! 이 이름은 어떠세요?</p>
+    <div id="modalResult">
+      <p class="modal__tada">짜잔! 이 이름은 어떠세요?</p>
 
-    <div class="modal__starburst" aria-hidden="true">
-      <span>✦</span><span>✧</span><span>★</span><span>✦</span><span>✧</span>
+      <div class="modal__starburst" aria-hidden="true">
+        <span>✦</span><span>✧</span><span>★</span><span>✦</span><span>✧</span>
+      </div>
+
+      <h2 id="modalName" class="modal__name"></h2>
+      <p id="modalHanja" class="modal__hanja"></p>
+      <p id="modalTag" class="modal__tag" hidden>순우리말</p>
+
+      <p id="modalChars" class="modal__chars"></p>
+      <p id="modalMeaning" class="modal__meaning"></p>
+
+      <div class="modal__actions">
+        <button type="button" id="againBtn" class="btn btn--ghost">
+          <span>↻ 다시 정하기</span>
+        </button>
+        <button type="button" id="shareBtn" class="btn btn--kakao">
+          <span>카톡 공유하기</span>
+        </button>
+      </div>
     </div>
 
-    <h2 id="modalName" class="modal__name"></h2>
-    <p id="modalHanja" class="modal__hanja"></p>
-    <p id="modalTag" class="modal__tag" hidden>순우리말</p>
-
-    <p id="modalChars" class="modal__chars"></p>
-    <p id="modalMeaning" class="modal__meaning"></p>
-
-    <div class="modal__actions">
-      <button type="button" id="againBtn" class="btn btn--ghost">
-        <span>↻ 다시 정하기</span>
-      </button>
-      <button type="button" id="shareBtn" class="btn btn--kakao">
-        <span>카톡 공유하기</span>
+    <div id="modalExhausted" class="modal__exhausted" hidden>
+      <p class="modal__exhausted-icon" aria-hidden="true">✦</p>
+      <p id="modalExhaustedText" class="modal__exhausted-text"></p>
+      <button type="button" id="exhaustedOkBtn" class="btn btn--gold btn--big">
+        <span>확인</span>
       </button>
     </div>
-
-    <p id="modalNote" class="modal__note"></p>
-    <button type="button" id="resetBtn" class="modal__reset" hidden>
-      지금까지 나온 이름 지우고 처음부터 보기
-    </button>
   </div>
 </div>
 
