@@ -741,7 +741,7 @@ input[type="range"]::-moz-range-thumb {
   color: var(--gold-2);
 }
 
-.modal__hanja {
+.modal__name {
   margin: 6px 0 0;
   font-family: var(--font-brand);
   font-size: clamp(2.4rem, 12vw, 3.2rem);
@@ -751,21 +751,16 @@ input[type="range"]::-moz-range-thumb {
   -webkit-background-clip: text; background-clip: text; color: transparent;
   text-shadow: 0 0 40px rgba(245,197,66,0.2);
 }
-.modal__hanja:empty { display: none; }
 
-.modal__name {
-  margin: 4px 0 0;
-  font-size: clamp(1.6rem, 8vw, 2.1rem);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text);
+.modal__hanja {
+  margin: 6px 0 0;
+  font-family: var(--font-brand);
+  font-size: clamp(1.1rem, 5vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--muted);
 }
-.modal__hanja:empty + .modal__name {
-  font-size: clamp(2.4rem, 12vw, 3.2rem);
-  background: linear-gradient(180deg, var(--gold-1), var(--gold-3));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  margin-top: 10px;
-}
+.modal__hanja:empty { display: none; }
 
 .modal__meaning {
   margin: 12px auto 0;
