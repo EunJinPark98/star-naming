@@ -1163,19 +1163,25 @@
     const r = current.result;
     const o = current.opts;
     let t = "별별 작명소에서 지은 이름 ✦ " + r.full;
-    if (o.script === "hanja") t += " (" + meaningOf(r.slots) + ")";
+    /* 카카오 카드를 못 띄우고 글로만 나갈 때도 뜻은 함께 보이게 한다 */
+    const meaning = o.script === "hanja" ? meaningOf(r.slots) : r.pure ? r.pure.d : "";
+    if (meaning) t += " (" + meaning + ")";
     return t;
   }
 
   if (KAKAO_JS_KEY) {
     const s = document.createElement("script");
     s.src = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js";
-    s.integrity = "sha384-TiCUE00h649CAMonG018J2ujOgDKW/kVWlChEuu4jK2vxfAAD0eZxzCKakxg55G4";
-    s.crossOrigin = "anonymous";
+    s.async = true;
     s.onload = () => {
       try {
-        window.Kakao.init(KAKAO_JS_KEY);
-      } catch (_) {}
+        if (!window.Kakao.isInitialized()) window.Kakao.init(KAKAO_JS_KEY);
+      } catch (e) {
+        console.warn("[별별 작명소] 카카오 SDK 초기화 실패:", e);
+      }
+    };
+    s.onerror = () => {
+      console.warn("[별별 작명소] 카카오 SDK를 불러오지 못했어요. 공유는 기본 방식으로 대신합니다.");
     };
     document.head.append(s);
   }
