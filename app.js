@@ -220,9 +220,12 @@
 
     hanjaRows = [];
 
-    const build = (who, parsed, line) => {
+    const build = (who, parsed, line, nativeBox) => {
       line.innerHTML = "";
-      if (!parsed) return false;
+      if (!parsed) {
+        nativeBox.checked = false;
+        return false;
+      }
 
       [...parsed.given].forEach((syl, i) => {
         const entry = SYL[syl];
@@ -244,11 +247,6 @@
             sel.append(o);
           });
         }
-        const none = document.createElement("option");
-        none.value = "none";
-        none.textContent = "한글 이름 (한자 없음)";
-        sel.append(none);
-
         const own = document.createElement("option");
         own.value = "custom";
         own.textContent = entry ? "✎ 직접 입력" : "✎ 직접 입력 (사전에 없는 글자)";
@@ -314,9 +312,18 @@
       return true;
     };
 
-    $("hanjaPickDad").hidden = !build("아빠", dad, $("hanjaRowsDad"));
-    $("hanjaPickMom").hidden = !build("엄마", mom, $("hanjaRowsMom"));
+    $("hanjaPickDad").hidden = !build("아빠", dad, $("hanjaRowsDad"), $("hanjaNativeDad"));
+    $("hanjaPickMom").hidden = !build("엄마", mom, $("hanjaRowsMom"), $("hanjaNativeMom"));
+    syncHanjaNative();
   }
+
+  /** 한글 이름 체크박스를 켜면 그 부모의 한자 선택 칸을 접어 둔다 */
+  function syncHanjaNative() {
+    $("hanjaRowsWrapDad").hidden = $("hanjaNativeDad").checked;
+    $("hanjaRowsWrapMom").hidden = $("hanjaNativeMom").checked;
+  }
+  $("hanjaNativeDad").addEventListener("change", syncHanjaNative);
+  $("hanjaNativeMom").addEventListener("change", syncHanjaNative);
 
   $("dadName").addEventListener("input", onNamesChanged);
   $("momName").addEventListener("input", onNamesChanged);
@@ -382,14 +389,20 @@
    * (한자 이름에서는 한자가 있어야 하니 뒤에서 걸러 낸다)
    */
   function parentSyllables() {
+    const nativeDad = $("hanjaNativeDad").checked;
+    const nativeMom = $("hanjaNativeMom").checked;
     return hanjaRows.map((r) => {
+      /* 한글 이름으로 체크한 쪽은 한자 없이 소리만 물려준다 */
+      const isNative = r.who === "아빠" ? nativeDad : nativeMom;
       let hanja = null;
-      if (r.sel.value === "custom") {
-        hanja = parseCustom(r.custom.value, r.syl);
-        /* 한자도 뜻도 안 적었으면 소리만 물려준다 */
-        if (hanja && !hanja.c && hanja.m === "뜻 모름") hanja = null;
-      } else if (r.sel.value !== "none" && r.has) {
-        hanja = SYL[r.syl].h[Number(r.sel.value) || 0];
+      if (!isNative) {
+        if (r.sel.value === "custom") {
+          hanja = parseCustom(r.custom.value, r.syl);
+          /* 한자도 뜻도 안 적었으면 소리만 물려준다 */
+          if (hanja && !hanja.c && hanja.m === "뜻 모름") hanja = null;
+        } else if (r.has) {
+          hanja = SYL[r.syl].h[Number(r.sel.value) || 0];
+        }
       }
       return { who: r.who, syl: r.syl, hanja };
     });

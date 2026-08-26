@@ -250,6 +250,24 @@ a { color: inherit; }
 .surtick.is-off { cursor: not-allowed; }
 .surtick.is-off span { opacity: 0.38; }
 
+/* 부모 이름이 한자에서 온 게 아닐 때 */
+.hanja-native { display: block; margin-top: 14px; cursor: pointer; user-select: none; }
+.hanja-native input { position: absolute; opacity: 0; pointer-events: none; }
+.hanja-native span {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-sub);
+  font-size: 0.82rem;
+  color: var(--muted-dim);
+  transition: color 0.15s ease;
+}
+.hanja-native input:checked + span { color: var(--gold-1); }
+.hanja-native input:checked + span .surtick__box {
+  background: linear-gradient(135deg, var(--gold-1), var(--gold-2));
+  border-color: var(--gold-2);
+}
+.hanja-native input:checked + span .surtick__box::after { opacity: 1; transform: rotate(45deg) scale(1); }
+.hanja-native input:focus-visible + span .surtick__box { outline: 2px solid var(--gold-2); outline-offset: 2px; }
+
 input[type="text"], select {
   width: 100%;
   min-height: 48px;
