@@ -170,22 +170,88 @@
     return pick.slice(0, -1).trim();
   }
 
-  /** "깊을" 을 유 자리에 적으셨을 때 㴗 을 찾아 준다. 여럿이면 여럿 그대로. */
-  function charsByHun(hun, syl) {
-    if (!HUN || !hun) return [];
-    const wants = hunForms(hun).map((f) => f + " " + syl);
-    const out = [];
+  /**
+   * 소리마다 그 소리로 읽는 한자를 모아 둔다. 처음 찾을 때 한 번만 만든다.
+   * 지 자리에 210자, 유 자리에 492자가 걸린다. 고르는 칸에 다 늘어놓으면
+   * 쓸 수 없으니, 뜻으로 좁혀 찾아 드리는 데에 쓴다.
+   */
+  let HUN_BY_SYL = null;
+
+  function buildHunIndex() {
+    if (HUN_BY_SYL || !HUN) return;
+    HUN_BY_SYL = {};
     for (const ch in HUN) {
       const reads = HUN[ch].split(",");
-      for (let i = 0; i < reads.length; i++) {
-        if (wants.indexOf(reads[i]) >= 0) {
-          out.push(ch);
+      const huns = [];
+      const eums = [];
+      for (const r of reads) {
+        const eum = r.slice(-1);
+        const hun = r.slice(0, -1).trim();
+        if (eums.indexOf(eum) < 0) eums.push(eum);
+        if (hun && huns.indexOf(hun) < 0) huns.push(hun);
+      }
+      for (const eum of eums) (HUN_BY_SYL[eum] = HUN_BY_SYL[eum] || []).push({ c: ch, huns });
+    }
+  }
+
+  /**
+   * 그 소리로 읽는 한자 가운데 적어 주신 말이 든 뜻을 찾는다.
+   *
+   * "사랑"만 적으셔도 "사랑할"이 걸리도록 품은 말로 견준다. 새김이 그 소리에
+   * 매인 것만 보면 忯(믿을 지 · 사랑할 기)에서 사랑을 찾을 수 없으니,
+   * 그 글자의 새김은 소리를 가리지 않고 모두 본다 — 어떻게 읽고 어떤 뜻으로
+   * 쓰시는지는 그 이름을 가진 분이 가장 잘 아신다.
+   */
+  function searchHanja(text, syl, limit, exactOnly) {
+    buildHunIndex();
+    const want = (text || "").trim();
+    if (!HUN_BY_SYL || !want) return [];
+    /* 우리 사전에 담아 둔 뜻으로도 찾을 수 있어야 한다.
+       智 를 훈음 표는 "슬기"로, 우리는 "지혜"로 적어 두었다. */
+    const list = (SYL[syl] ? SYL[syl].h.map((h) => ({ c: h.c, huns: [h.m] })) : []).concat(
+      HUN_BY_SYL[syl] || []
+    );
+    const forms = hunForms(want);
+    const exact = [];
+    const partial = [];
+    const seen = new Set();
+    for (const item of list) {
+      if (seen.has(item.c + "/" + item.huns[0])) continue;
+      for (const hun of item.huns) {
+        const key = item.c + "/" + hun;
+        if (seen.has(key)) continue;
+        if (forms.some((f) => f === hun)) {
+          seen.add(key);
+          exact.push({ c: item.c, hun });
+          break;
+        }
+        if (forms.some((f) => hun.indexOf(f) >= 0)) {
+          seen.add(key);
+          partial.push({ c: item.c, hun });
           break;
         }
       }
-      if (out.length >= 6) break;
     }
-    return out;
+    /* 우리 사전에 담긴 글자를 앞에 둔다. 눈에 익은 글자가 먼저 보이도록. */
+    const rank = (x) => (HANJA_INDEX[x.c] ? 0 : 1);
+    const sort = (a, b) => rank(a) - rank(b) || a.hun.length - b.hun.length;
+    const out = exact.sort(sort);
+    const all = exactOnly ? out : out.concat(partial.sort(sort));
+    /* 같은 글자를 같은 뜻으로 두 번 늘어놓지 않는다 — 우리 사전은 "믿음",
+       훈음 표는 "믿을"로 적어 두어 둘 다 걸린다. */
+    const kept = [];
+    for (const x of all) {
+      if (kept.some((y) => y.c === x.c && sameHun(y.hun, x.hun))) continue;
+      kept.push(x);
+      if (kept.length >= (limit || 12)) break;
+    }
+    return kept;
+  }
+
+  /** "깊을" 을 유 자리에 적으셨을 때 㴗 을 찾아 준다. 여럿이면 여럿 그대로.
+      여기서는 딱 맞는 새김만 본다. 적어 주신 말 그대로 쓸 것이기 때문이다. */
+  function charsByHun(hun, syl) {
+    return searchHanja(hun, syl, 6, true).map((x) => x.c);
   }
 
   const JONG = ["", "ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
@@ -267,13 +333,15 @@
     /* 한 글자거나 "밝을"처럼 이미 꾸며 주는 꼴이면 그대로 쓰고,
        "은혜"처럼 이름씨면 "의"를 붙여야 말이 된다. */
     const adnominal = m.length === 1 || jongOf(m) === "ㄹ";
-    /* 잇는 자리에서는 꾸미는 꼴이 걸린다 — "사랑할 고운 아이"가 되어 버린다.
-       "사랑함"처럼 이름씨로 바꾸어 "사랑함과 고운 아이"로 잇는다. */
-    const noun = (jongOf(m) === "ㄹ" && swapJong(m, "ㄹ", "ㅁ")) || m;
+    /* "사랑할"처럼 움직씨를 꾸미는 꼴로 적어 주시면 그대로 잇기가 어렵다.
+       "사랑할 옥" · "사랑할 고운 아이"가 되어 버린다. "사랑함"으로 바꾸어
+       "사랑함이 담긴 옥" · "사랑함과 고운 아이"로 두른다. */
+    const verbal = m.length > 1 && jongOf(m) === "ㄹ";
+    const noun = (verbal && swapJong(m, "ㄹ", "ㅁ")) || m;
     return {
       c: ch || "",
       m,
-      a: adnominal ? m : m + "의",
+      a: verbal ? noun + "이 담긴" : adnominal ? m : m + "의",
       j: noun + (jongOf(noun) ? "과" : "와"),
       t: null,
       custom: true,
@@ -376,7 +444,7 @@
         }
         const own = document.createElement("option");
         own.value = "custom";
-        own.textContent = entry ? "✎ 직접 입력" : "✎ 한자 직접 입력";
+        own.textContent = entry ? "✎ 직접 입력 · 찾기" : "✎ 한자 찾기 · 직접 입력";
         sel.append(own);
 
         /* 사전에 없는 글자는 처음부터 직접 입력으로 연다 */
@@ -393,7 +461,8 @@
            그 자리의 소리로 읽는 글자를 보기로 들면 가장 알아보기 쉽다. */
         const sampleC = entry ? entry.h[0].c : "恩";
         const sampleH = (entry ? hunOf(sampleC, syl) : "") || (entry ? entry.h[0].m : "은혜");
-        custom.placeholder = "예) " + sampleC + "   또는   " + sampleH + " " + (entry ? syl : "은") + " " + sampleC;
+        /* 한자를 알면 그대로, 뜻만 알면 뜻으로 — 두 길을 다 보여 준다 */
+        custom.placeholder = "한자 " + sampleC + "  ·  뜻 " + sampleH;
         custom.maxLength = 12;
         /* 딸린 이름표가 없는 칸이라, 읽어 주는 이름을 붙여 둔다 */
         custom.setAttribute("aria-label", who + " 이름 '" + syl + "' 의 한자 직접 입력");
@@ -402,13 +471,47 @@
         const note = document.createElement("p");
         note.className = "hrow__note";
 
-        /* 적어 준 값을 어떻게 알아들었는지 그때그때 알려 준다 */
-        const syncNote = () => {
-          if (sel.value !== "custom" || !custom.value.trim()) {
-            note.textContent = "";
-            note.hidden = true;
+        /* 찾은 글자를 눌러 고를 수 있게 늘어놓는 자리.
+           지 자리에만 210자, 유 자리에는 492자가 걸려 고르는 칸에 다
+           담을 수가 없다. 뜻을 적으시면 그때 좁혀서 보여 드린다. */
+        const finds = document.createElement("div");
+        finds.className = "hrow__finds";
+        finds.hidden = true;
+
+        const showFinds = (text) => {
+          finds.innerHTML = "";
+          const hits = searchHanja(text, syl, 12);
+          if (!hits.length) {
+            finds.hidden = true;
             return;
           }
+          for (const hit of hits) {
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "hchip";
+            chip.textContent = hit.c + " · " + hit.hun;
+            chip.title = hit.hun + " " + syl + " " + hit.c;
+            chip.addEventListener("click", () => {
+              custom.value = hit.hun + " " + syl + " " + hit.c;
+              syncNote();
+              custom.focus();
+            });
+            finds.append(chip);
+          }
+          finds.hidden = false;
+        };
+
+        /* 적어 준 값을 어떻게 알아들었는지 그때그때 알려 준다 */
+        const syncNote = () => {
+          const raw = custom.value.trim();
+          if (sel.value !== "custom" || !raw) {
+            note.textContent = "";
+            note.hidden = true;
+            finds.hidden = true;
+            return;
+          }
+          /* 한자를 이미 짚으셨으면 더 찾아 드릴 것이 없다 */
+          showFinds(CJK.test(raw) ? "" : stripReading(raw, syl));
           const parsed = parseCustom(custom.value, syl);
           note.hidden = false;
           if (!parsed) {
@@ -442,9 +545,7 @@
               }
             }
           } else if (parsed.candidates) {
-            note.textContent =
-              "'" + parsed.m + " " + syl + "'로 읽는 한자가 여럿이에요 — " +
-              parsed.candidates.join(" · ") + " … 이 중에서 골라 적어 주세요.";
+            note.textContent = "아래에서 쓰실 한자를 골라 주세요.";
             note.className = "hrow__note is-warn";
           } else if (parsed.c) {
             /* 글자는 그대로 쓴다. 우리가 뜻을 모를 뿐이라는 것을 분명히 한다.
@@ -455,20 +556,26 @@
               "뒤에 뜻도 적어 주세요. (예: 一 하나)";
             note.className = "hrow__note is-ok";
           } else {
-            note.textContent = "한자를 함께 적어 주세요. 뜻만으로는 한자 이름을 만들 수 없어요.";
+            note.textContent = finds.hidden
+              ? "그 소리로 그런 뜻을 가진 한자를 못 찾았어요. 한자를 그대로 적어 주세요."
+              : "아래에서 쓰실 한자를 골라 주세요.";
             note.className = "hrow__note is-warn";
           }
         };
 
         const syncCustom = () => {
-          custom.hidden = sel.value !== "custom";
+          const open = sel.value === "custom";
+          custom.hidden = !open;
+          /* 직접 입력을 열면 적을 칸과 찾은 글자가 들어와 자리가 좁다.
+             그 줄만 한 줄을 다 쓰게 한다. */
+          row.classList.toggle("is-open", open);
           syncNote();
         };
         syncCustom();
         sel.addEventListener("change", syncCustom);
         custom.addEventListener("input", syncNote);
 
-        row.append(sel, custom, note);
+        row.append(sel, custom, note, finds);
         line.append(row);
 
         hanjaRows.push({ who, syl, idx: i, sel, custom, has: !!entry });

@@ -310,6 +310,8 @@ select option { background: #12131c; color: var(--text); }
   gap: 6px;
   flex: 1 1 100px; min-width: 0;
 }
+/* 직접 입력을 연 줄은 한 줄을 다 쓴다 */
+.hrow.is-open { flex: 1 1 100%; }
 .hrow__custom {
   flex: 1 1 100%;
   min-height: 42px !important;
@@ -324,6 +326,24 @@ select option { background: #12131c; color: var(--text); }
   line-height: 1.5;
 }
 .hrow__note.is-ok { color: var(--gold-2); }
+/* 뜻으로 찾아 드린 한자. 눌러서 고른다. */
+.hrow__finds {
+  flex: 1 1 100%;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 2px;
+}
+.hchip {
+  padding: 7px 11px;
+  border: 1px solid rgba(245,197,66,0.32);
+  border-radius: 10px;
+  background: rgba(245,197,66,0.06);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.86rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.hchip:hover, .hchip:focus-visible { border-color: var(--gold-2); background: rgba(245,197,66,0.14); }
 .hrow__note.is-warn { color: #ffc9a0; }
 .hrow__syl {
   flex: 0 0 36px;
