@@ -20,30 +20,34 @@ const W = 1080;
 const H = 1080;
 
 /* 글꼴은 찬 곳에서 한 번만 읽는다 */
+const FONT_FILE = "byeol-card.woff2";
 let fontReady = false;
+let fontFrom = "";
+
+function fontCandidates() {
+  return [
+    path.join(__dirname, "fonts", FONT_FILE),
+    path.join(process.cwd(), "api/fonts", FONT_FILE),
+    path.join(process.cwd(), "fonts", FONT_FILE),
+    path.join("/var/task/api/fonts", FONT_FILE),
+  ];
+}
+
 function loadFont() {
   if (fontReady) return true;
-  const names = ["byeol-card.woff2"];
-  const dirs = [
-    path.join(__dirname, "fonts"),
-    path.join(process.cwd(), "api/fonts"),
-    path.join(process.cwd(), "fonts"),
-  ];
-  for (const dir of dirs) {
-    for (const name of names) {
-      const file = path.join(dir, name);
-      try {
-        if (fs.existsSync(file)) {
-          GlobalFonts.register(fs.readFileSync(file), FONT);
-          fontReady = true;
-          return true;
-        }
-      } catch (_) {
-        /* 다음 자리를 본다 */
+  for (const file of fontCandidates()) {
+    try {
+      if (fs.existsSync(file)) {
+        GlobalFonts.register(fs.readFileSync(file), FONT);
+        fontReady = true;
+        fontFrom = file;
+        return true;
       }
+    } catch (e) {
+      console.error("[card] 글꼴을 읽지 못했습니다:", file, e.message);
     }
   }
-  console.error("[card] 글꼴을 찾지 못했습니다. 찾아본 곳:", dirs.join(", "));
+  console.error("[card] 글꼴을 찾지 못했습니다. 찾아본 곳:", fontCandidates().join(", "));
   return false;
 }
 
@@ -241,7 +245,40 @@ function drawCard(o) {
 }
 
 module.exports = (req, res) => {
-  const query = req.query || {};
+  /* req.query 는 Vercel 이 채워 주지만, 없으면 주소에서 직접 읽는다 */
+  let query = req.query;
+  if (!query) {
+    try {
+      query = Object.fromEntries(
+        new URL(req.url, "http://x").searchParams
+      );
+    } catch (_) {
+      query = {};
+    }
+  }
+
+  /* 어디서 걸렸는지 눈으로 보려고 둔 자리. 비밀은 담지 않는다. */
+  if (query.debug) {
+    const found = loadFont();
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.status(200).end(
+      JSON.stringify(
+        {
+          ok: found,
+          node: process.version,
+          fontLoadedFrom: fontFrom || null,
+          triedPaths: fontCandidates().map((p) => ({ path: p, exists: fs.existsSync(p) })),
+          cwd: process.cwd(),
+          dirname: __dirname,
+          sawQuery: query,
+        },
+        null,
+        2
+      )
+    );
+    return;
+  }
+
 
   /* 이 자리가 살아 있는지만 묻는 것. 그림은 그리지 않는다.
      (정적 서버로 띄워 보는 경우처럼 여기가 없을 수 있어서, 쪽에서 먼저

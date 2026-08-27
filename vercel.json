@@ -2,9 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/card.js": {
-      "includeFiles": "api/fonts/**",
-      "memory": 1024,
-      "maxDuration": 15
+      "includeFiles": "api/fonts/**"
     }
   }
 }
