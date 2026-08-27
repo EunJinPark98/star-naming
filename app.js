@@ -1296,6 +1296,8 @@
   let shownKey = "";
   /** 마지막으로 제출한 조건 */
   let lastOpts = null;
+  /** 닮음을 풀었다고 이미 말씀드린 사정 */
+  let relaxTold = "";
 
   function openModal(result, opts) {
     current = { result, opts };
@@ -1508,26 +1510,41 @@
         return;
       }
 
+      /* 닮음을 지키지 못했으면 조용히 넘기지 않는다.
+         앞서 다 보여 드려서 남지 않은 것이라면, 한자 이름과 똑같이
+         "모두 보여 드렸어요" 화면과 다시 보기를 드린다. 그런 이름이
+         애초에 없는 것이라면 그렇다고만 알려 드리고 지어 놓은 이름을
+         보여 드린다 — 다시 보기를 눌러 봐야 달라질 것이 없다. */
+      if (result.gotParent < result.wantParent) {
+        /* 기록을 지웠다면 어디까지 닮게 지을 수 있었는가 */
+        const fresh = Object.assign({}, opts, { exclude: new Set() });
+        let best = 0;
+        for (let w = result.wantParent; w > 0; w--) {
+          if (pickPureName(fresh, w)) {
+            best = w;
+            break;
+          }
+        }
+        if (result.gotParent < best) {
+          showExhausted("부모님 이름 글자를 품은 순우리말 이름을 모두 보여 드렸어요.");
+          return;
+        }
+        /* 같은 말을 지을 때마다 되풀이하지 않는다. 사정이 달라지지 않는데
+           6초짜리 안내가 매번 뜨면 성가시다. */
+        const say = opts.key + "/" + opts.simil + "/" + result.wantParent + "/" + result.gotParent;
+        if (relaxTold !== say) {
+          relaxTold = say;
+          toast(
+            result.gotParent > 0
+              ? "두 분 글자를 다 품은 순우리말 이름이 없어, 한 글자만 물려받았어요."
+              : "부모님 이름 글자를 품은 순우리말 이름이 없어, 새로 지었어요."
+          );
+        }
+      }
+
       shown.add(result.full);
       writeShown(opts.key, shown);
       openModal(result, opts);
-
-      /* 닮음을 지키지 못했으면 조용히 넘기지 않는다.
-         애초에 그런 이름이 없는 것인지, 앞서 다 보여 드려서 남지 않은
-         것인지는 갈라서 말씀드린다. */
-      if (result.gotParent < result.wantParent) {
-        const spent = !!pickPureName(
-          Object.assign({}, opts, { exclude: new Set() }),
-          result.wantParent
-        );
-        toast(
-          spent
-            ? "닮음 " + opts.simil + "%로 지을 순우리말 이름은 이미 다 보여 드려서, 조건을 풀고 지었어요."
-            : result.gotParent > 0
-            ? "두 분 글자를 다 품은 순우리말 이름이 없어, 한 글자만 물려받았어요."
-            : "부모님 이름 글자를 품은 순우리말 이름이 없어, 새로 지었어요."
-        );
-      }
     }, wait);
   }
 
