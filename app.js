@@ -667,8 +667,12 @@
 
   /** 한글 이름 체크박스를 켜면 그 부모의 한자 선택 칸을 접어 둔다 */
   function syncHanjaNative() {
-    $("hanjaRowsWrapDad").hidden = $("hanjaNativeDad").checked;
-    $("hanjaRowsWrapMom").hidden = $("hanjaNativeMom").checked;
+    for (const who of ["Dad", "Mom"]) {
+      const on = $("hanjaNative" + who).checked;
+      $("hanjaRowsWrap" + who).hidden = on;
+      /* 한자 고르는 줄이 접히면 위가 허전해 여백을 줄인다 */
+      $("hanjaPick" + who).classList.toggle("is-native", on);
+    }
   }
   $("hanjaNativeDad").addEventListener("change", syncHanjaNative);
   $("hanjaNativeMom").addEventListener("change", syncHanjaNative);
@@ -758,14 +762,35 @@
     });
   }
 
+  /**
+   * 이 글자를 한자 이름에 물려줄 수 있는가.
+   *
+   * 고르신 한자가 있으면 그대로 쓴다. 한글 이름이라 한자가 없어도, 그 소리를
+   * 적는 한자가 사전에 있으면 거기서 골라 넣는다. 물려받는 것은 소리이지
+   * 한자가 아니기 때문이다.
+   */
+  function canLendHanja(p) {
+    if (p.hanja && p.hanja.c) return true;
+    return !!(SYL[p.syl] && SYL[p.syl].h.length);
+  }
+
+  /** 물려받은 글자에 붙일 한자. 고르신 것이 있으면 그대로. */
+  function lentHanja(p) {
+    if (p.hanja && p.hanja.c) return p.hanja;
+    const all = (SYL[p.syl] && SYL[p.syl].h) || [];
+    const open = all.filter((h) => !h.x);
+    const list = open.length ? open : all;
+    return list.length ? list[(Math.random() * list.length) | 0] : null;
+  }
+
   /* ── 유사도 ───────────────────────────────── */
 
   const SIMIL_PLAN = {
-    0: { parent: 0, tag: 0, desc: "부모님 이름과 상관없이 새로 짓습니다." },
-    25: { parent: 0, tag: 1, desc: "글자는 새로 짓되, 부모님 한자의 뜻 계열을 이어받습니다." },
-    50: { parent: 1, tag: 0, desc: "부모님 이름에서 한 글자를 그대로 가져옵니다." },
-    75: { parent: 1, tag: 1, desc: "한 글자를 그대로 가져오고, 나머지도 같은 뜻 계열로 맞춥니다." },
-    100: { parent: 2, tag: 0, desc: "아빠와 엄마 이름에서 각각 한 글자씩 가져옵니다." },
+    0: { parent: 0, tag: 0, desc: "두 분 이름과 상관없이 새로 짓습니다." },
+    25: { parent: 0, tag: 1, desc: "글자는 새로 짓되, 두 분 이름의 뜻 계열을 이어받습니다." },
+    50: { parent: 1, tag: 0, desc: "두 분 이름에서 한 글자를 그대로 물려받습니다." },
+    75: { parent: 1, tag: 1, desc: "한 글자를 그대로 물려받고, 나머지도 같은 뜻 계열로 맞춥니다." },
+    100: { parent: 2, tag: 0, desc: "아빠 이름에서 한 글자, 엄마 이름에서 한 글자를 물려받습니다." },
   };
 
   /* 잠기기 직전에 고르던 닮음. 이름을 적으면 이 값으로 되돌린다. */
@@ -783,7 +808,7 @@
       slider.disabled = true;
       $("simil").closest(".simil-block").classList.add("is-off");
       $("similPct").textContent = "0%";
-      $("similDesc").textContent = "엄마 아빠 이름을 적어주세요.";
+      $("similDesc").textContent = "위에 엄마 아빠 이름을 적어 주세요.";
       return;
     }
 
@@ -1098,9 +1123,7 @@
       if (wantParent > 0) {
         /* 물려받을 글자도 고른 성별에 맞는 것을 먼저 본다.
            그것만으로 수가 모자라면 그때 나머지도 함께 본다. */
-        /* 한자 이름은 한자를 아는 글자만 물려받을 수 있다 */
-        /* 한자 이름에 넣으려면 한자 글자를 알아야 한다 */
-        let source = o.script === "hanja" ? parents.filter((p) => p.hanja && p.hanja.c) : parents;
+        let source = o.script === "hanja" ? parents.filter(canLendHanja) : parents;
         if (keep.gender && o.gender !== "N") {
           const fit = source.filter((p) => genderOk(p.syl, o.gender));
           const whos = new Set(fit.map((p) => p.who));
@@ -1125,7 +1148,13 @@
           const posGood = !keep.pos || posOk(p.syl, spot, o.len);
           const chosungGood = chosungOk(p.syl, spot, o.chosung);
           if (posGood && chosungGood) {
-            slots[spot] = { syl: p.syl, hanja: p.hanja, from: p.who };
+            /* 한자가 없는 글자는 그 소리를 적는 한자를 골라 넣는다 */
+            const h = o.script === "hanja" ? lentHanja(p) : p.hanja;
+            if (h === null && o.script === "hanja") {
+              ok = false;
+              return;
+            }
+            slots[spot] = { syl: p.syl, hanja: h, from: p.who };
             used.add(p.syl);
           } else {
             ok = false;
@@ -1478,8 +1507,11 @@
 
     const parents = parentSyllables();
 
-    /* 한자 이름은 뜻을 아는 글자라야 물려받을 수 있다 */
-    const usable = script === "hanja" ? parents.filter((p) => p.hanja && p.hanja.c) : parents;
+    /* 한자 이름에 물려줄 수 있는 글자.
+       한자를 고르셨으면 그 한자를 그대로 쓰고, 한글 이름이라 한자가 없으면
+       그 소리를 적는 한자를 사전에서 찾아 넣는다. 김한별 · 이은결 두 분이
+       모두 한글 이름이어도 김한결 같은 한자 이름을 지어 드릴 수 있다. */
+    const usable = script === "hanja" ? parents.filter(canLendHanja) : parents;
 
     const mustMode = document.querySelector('input[name="must"]:checked').value;
     let mustChar = "";
@@ -1510,7 +1542,7 @@
       return {
         error:
           script === "hanja"
-            ? "두 분 이름의 한자를 몰라 물려줄 글자가 없어요. 이름 표기를 순우리말로 바꾸거나 닮음을 0%로 해 주세요."
+            ? "두 분 이름의 글자를 한자로 옮길 수가 없어요. 이름 표기를 순우리말로 바꾸거나 닮음을 0%로 해 주세요."
             : "두 분 이름을 다시 확인해 주세요.",
       };
     }
