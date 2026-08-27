@@ -1406,8 +1406,16 @@
 
   function shareText() {
     if (!current) return "";
-    /* 카카오 카드를 못 띄우고 글로만 나갈 때도 한자와 뜻이 함께 보이게 한다 */
-    return ["별별 작명소에서 지은 이름 ✦ " + current.result.full, readingPlain(), meaningPlain()]
+    /* 카카오 카드를 못 띄우고 글로만 나갈 때도 한자와 뜻, 링크가 함께 보이게 한다.
+       (이미지 공유는 파일과 이 글만 실어 보내므로, 링크를 안에 넣어 두지 않으면
+       사진만 돌아다니고 사이트로 오는 길이 사라진다) */
+    const url = location.href.split("#")[0];
+    return [
+      "별별 작명소에서 지은 이름 ✦ " + current.result.full,
+      readingPlain(),
+      meaningPlain(),
+      url,
+    ]
       .filter(Boolean)
       .join("\n");
   }
@@ -1465,7 +1473,8 @@
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: "별별 작명소", text, url });
+        /* text 안에 링크가 이미 있으니 url 을 따로 또 넘기지 않는다 (겹쳐 보이는 것을 막는다) */
+        await navigator.share({ title: "별별 작명소", text });
         return;
       } catch (err) {
         if (err && err.name === "AbortError") return;
