@@ -66,13 +66,18 @@
           : "rgba(255, 255, 255, " + a * 0.85 + ")";
         ctx.fill();
       }
-      requestAnimationFrame(frame);
+      /* 움직임을 줄여 달라고 하신 분께는 반짝임이 없다.
+         같은 그림을 초에 예순 번 다시 그릴 까닭이 없으니 한 번만 그린다. */
+      if (!reduceMotion) requestAnimationFrame(frame);
     }
 
     let timer;
     window.addEventListener("resize", () => {
       clearTimeout(timer);
-      timer = setTimeout(resize, 180);
+      timer = setTimeout(() => {
+        resize();
+        if (reduceMotion) frame(0); // 멈춰 있는 그림은 크기가 바뀌면 다시 그려야 한다
+      }, 180);
     });
     resize();
     requestAnimationFrame(frame);
@@ -485,6 +490,10 @@
             sel.append(o);
           });
         }
+        /* 곁에 놓인 글자 상자가 눈에는 이름표 노릇을 하지만
+           읽어 주는 쪽에는 닿지 않아, 따로 붙여 둔다 */
+        sel.setAttribute("aria-label", who + " 이름 '" + syl + "' 의 한자");
+
         const own = document.createElement("option");
         own.value = "custom";
         own.textContent = entry ? "✎ 직접 입력 · 찾기" : "✎ 한자 찾기 · 직접 입력";
@@ -608,6 +617,9 @@
 
         const syncCustom = () => {
           const open = sel.value === "custom";
+          /* 700KB 짜리 표라, 직접 적으려 하실 때 그제야 받는다.
+             안 여시는 분이 훨씬 많다. */
+          if (open) wantHun();
           custom.hidden = !open;
           /* 직접 입력을 열면 적을 칸과 찾은 글자가 들어와 자리가 좁다.
              그 줄만 한 줄을 다 쓰게 한다. */
@@ -621,7 +633,16 @@
         row.append(sel, custom, note, finds);
         line.append(row);
 
-        hanjaRows.push({ who, syl, idx: i, sel, custom, has: !!entry });
+        /* 훈음 표가 늦게 닿았을 때, 화면을 다시 그리지 않고 이 줄만 손본다.
+           다시 그리면 고르던 자리와 글 쓰던 자리를 잃는다. */
+        const refresh = () => {
+          const c = entry ? entry.h[0].c : "恩";
+          const h = (entry ? hunOf(c, syl) : "") || (entry ? entry.h[0].m : "은혜");
+          custom.placeholder = "한자 " + c + "  ·  뜻 " + h;
+          syncNote();
+        };
+
+        hanjaRows.push({ who, syl, idx: i, sel, custom, has: !!entry, refresh });
       });
 
       return true;
@@ -631,16 +652,15 @@
     $("hanjaPickMom").hidden = !build("엄마", mom, $("hanjaRowsMom"), $("hanjaNativeMom"));
     syncHanjaNative();
 
-    /* 고를 자리가 생겼으니 훈음 표를 받아 둔다. 다 받으면 적어 두신 값을
-       다시 읽어 드린다(고른 값은 prev 로 그대로 이어진다). */
-    if (dad || mom) {
-      loadHun(() => {
-        /* 적고 계신 중이면 건드리지 않는다. 다음에 다시 그릴 때 반영된다. */
-        const on = document.activeElement;
-        if (on && on.classList && on.classList.contains("hrow__custom")) return;
-        renderHanjaPick();
-      });
-    }
+    /* 앞서 직접 입력을 골라 두셨으면 표가 있어야 한다 */
+    if (hanjaRows.some((r) => r.sel.value === "custom")) wantHun();
+  }
+
+  /** 훈음 표를 받아 두고, 닿으면 적어 두신 값을 다시 읽어 드린다 */
+  function wantHun() {
+    loadHun(() => {
+      for (const r of hanjaRows) if (r.refresh) r.refresh();
+    });
   }
 
   /** 한글 이름 체크박스를 켜면 그 부모의 한자 선택 칸을 접어 둔다 */
@@ -1049,6 +1069,8 @@
     ];
 
     const results = [];
+    /* 뜻이 겹치는 이름. 달리 낼 것이 없을 때만 쓴다. */
+    const spare = [];
     const seen = new Set();
 
     for (let n = 0; n < 6000 && results.length < 40; n++) {
@@ -1146,11 +1168,17 @@
       const full = o.surname + given;
       if (o.exclude.has(full)) continue;
 
-      results.push({ slots, given, full, inherited });
+      /* 뜻이 겹치면 "하늘 같은 하늘" · "향기로운 향기" 처럼 읽힌다.
+         글자는 다른데 뜻이 같아 생기는 일이라 글자만 보아서는 못 거른다.
+         뜻풀이를 만들어 보고 같은 말이 두 번 나오면 뒤로 미룬다. */
+      (repeatsWord(meaningOf(slots)) ? spare : results).push({ slots, given, full, inherited });
     }
 
-    if (!results.length) return null;
-    return results[(Math.random() * results.length) | 0];
+    /* 겹치지 않는 것이 하나도 없으면 그때는 겹쳐도 내놓는다.
+       뜻이 조금 겹치는 이름이 "없어요" 보다는 낫다. */
+    const pool2 = results.length ? results : spare;
+    if (!pool2.length) return null;
+    return pool2[(Math.random() * pool2.length) | 0];
   }
 
   /* ── 뜻풀이 ───────────────────────────────── */
@@ -1181,6 +1209,29 @@
     return head
       ? h[0].j + " " + h[1].a + " " + last.m
       : h[0].j + " " + h[1].j + " " + last.a + " 아이";
+  }
+
+  /**
+   * 뜻풀이에 같은 말이 두 번 나오는지 본다.
+   * "하늘 같은 하늘" · "향기로운 향기" · "기둥 같은 기둥" 같은 것.
+   * 한쪽이 다른 쪽을 품는 것도 본다 — "볕처럼 환하고 아침 볕처럼 환한".
+   */
+  function repeatsWord(text) {
+    if (!text) return false;
+    const words = text.replace(" 아이", "").split(/\s+/).filter(Boolean);
+    const same = (a, b) => {
+      if (a === b) return true;
+      const [x, y] = a.length < b.length ? [a, b] : [b, a];
+      /* 한 글자짜리("복")도 잡되, 남의 말 가운데에 우연히 든 것은 넘긴다.
+         "복된 복"은 잡고 "글이 깊은 볕"은 넘긴다. */
+      return y.indexOf(x) === 0 || y.lastIndexOf(x) === y.length - x.length;
+    };
+    for (let i = 0; i < words.length; i++) {
+      for (let j = i + 1; j < words.length; j++) {
+        if (same(words[i], words[j])) return true;
+      }
+    }
+    return false;
   }
 
   /** 글자마다 "보배 진 珍" 처럼 뜻 · 음 · 한자를 늘어놓는다. */
