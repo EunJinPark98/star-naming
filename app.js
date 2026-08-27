@@ -232,6 +232,24 @@
     return [...out];
   }
 
+  /** "빛날"과 "빛남"처럼 같은 뜻을 다르게 적은 것인지 본다 */
+  function sameHun(a, b) {
+    if (!a || !b) return false;
+    return hunForms(a).some((f) => f === b || b.indexOf(f) >= 0 || f.indexOf(b) >= 0);
+  }
+
+  /** 이 글자를 달리 새기는 말들. 忯 이면 지금 쓰는 "믿을" 말고 "사랑할". */
+  function otherHuns(ch, using) {
+    if (!HUN || !HUN[ch]) return [];
+    const out = [];
+    for (const r of HUN[ch].split(",")) {
+      const hun = r.slice(0, -1).trim();
+      if (!hun || sameHun(hun, using)) continue;
+      if (out.indexOf(hun) < 0) out.push(hun);
+    }
+    return out.slice(0, 3);
+  }
+
   /** "한 일"처럼 뒤에 붙은 음을 떼어낸다 */
   function stripReading(text, syl) {
     let t = (text || "").replace(/[()（）·,]/g, " ").replace(/\s+/g, " ").trim();
@@ -249,11 +267,14 @@
     /* 한 글자거나 "밝을"처럼 이미 꾸며 주는 꼴이면 그대로 쓰고,
        "은혜"처럼 이름씨면 "의"를 붙여야 말이 된다. */
     const adnominal = m.length === 1 || jongOf(m) === "ㄹ";
+    /* 잇는 자리에서는 꾸미는 꼴이 걸린다 — "사랑할 고운 아이"가 되어 버린다.
+       "사랑함"처럼 이름씨로 바꾸어 "사랑함과 고운 아이"로 잇는다. */
+    const noun = (jongOf(m) === "ㄹ" && swapJong(m, "ㄹ", "ㅁ")) || m;
     return {
       c: ch || "",
       m,
       a: adnominal ? m : m + "의",
-      j: adnominal ? m : m + (jongOf(m) ? "과" : "와"),
+      j: noun + (jongOf(noun) ? "과" : "와"),
       t: null,
       custom: true,
       short: adnominal,
@@ -270,11 +291,15 @@
 
     const hit = raw.match(CJK);
     if (hit) {
-      const found = HANJA_INDEX[hit[0]];
-      if (found) return found; // 사전에 있으면 뜻풀이까지 그대로 쓴다
-      /* 뜻을 함께 적어 주셨으면 그 뜻을 쓰고, 아니면 훈음 표에서 찾는다 */
+      const ch = hit[0];
       const typed = stripReading(raw.replace(CJK, " "), syl);
-      return customHanja(typed || hunOf(hit[0], syl), hit[0]);
+      const found = HANJA_INDEX[ch];
+      /* 뜻을 함께 적어 주셨으면 그 뜻이 먼저다. 忯 을 사전에 "믿음"으로
+         담아 두었어도 "사랑할 지 忯" 이라 적으셨으면 사랑으로 쓴다.
+         한 글자에 뜻이 여럿인데 우리가 하나만 골라 둔 탓이다. */
+      if (typed && !(found && sameHun(typed, found.m))) return customHanja(typed, ch);
+      if (found) return found; // 사전에 있으면 뜻풀이까지 그대로 쓴다
+      return customHanja(hunOf(ch, syl), ch);
     }
 
     const hun = stripReading(raw, syl);
@@ -389,7 +414,7 @@
           if (!parsed) {
             note.textContent = "";
             note.hidden = true;
-          } else if (!parsed.custom) {
+          } else if (parsed.c && (parsed.m !== "뜻 모름" || !parsed.custom)) {
             /* 지 자리에 盛(성)을 적는 것처럼, 읽는 소리가 어긋나면 짚어 드린다.
                잘못 적으신 것일 수도 있고, 우리가 모르는 읽기일 수도 있어
                막지는 않는다. */
@@ -401,20 +426,20 @@
                 "' 자리가 맞나요? 그대로 쓰셔도 됩니다.";
               note.className = "hrow__note is-warn";
             } else {
-              note.textContent = "✓ 사전에서 찾았어요 — " + parsed.c + " · " + parsed.m + " " + syl;
+              note.textContent = parsed.custom
+                ? "✓ " + parsed.c + " · " + parsed.m + " " + syl + ro(syl) + " 씁니다"
+                : "✓ 사전에서 찾았어요 — " + parsed.c + " · " + parsed.m + " " + syl;
               note.className = "hrow__note is-ok";
-            }
-          } else if (parsed.c && parsed.m !== "뜻 모름") {
-            const reads = readingsOf(parsed.c);
-            if (reads.length && reads.indexOf(syl) < 0) {
-              note.textContent =
-                parsed.c + " " + eun(reads[0]) + " '" + reads.join("' · '") + "'" +
-                ro(reads[reads.length - 1]) + " 읽어요. '" + syl +
-                "' 자리가 맞나요? 그대로 쓰셔도 됩니다.";
-              note.className = "hrow__note is-warn";
-            } else {
-              note.textContent = "✓ " + parsed.c + " · " + parsed.m + " " + syl + ro(syl) + " 씁니다";
-              note.className = "hrow__note is-ok";
+
+              /* 한 글자를 여러 뜻으로 새기는 일이 있다. 忯 을 우리는 "믿을"로
+                 담아 두었지만 "사랑할"로 쓰시는 분도 계신다. 뜻을 따로 적지
+                 않으셨을 때만, 다른 새김이 있다고 알려 드린다. */
+              const others = custom.value.trim() === parsed.c ? otherHuns(parsed.c, parsed.m) : [];
+              if (others.length) {
+                note.textContent +=
+                  " · '" + others.join("' · '") + "'로도 새기는 글자예요 — " +
+                  "그 뜻이면 '" + others[0] + " " + syl + " " + parsed.c + "'라고 적어 주세요.";
+              }
             }
           } else if (parsed.candidates) {
             note.textContent =
@@ -1122,20 +1147,6 @@
   /** 마지막으로 제출한 조건 */
   let lastOpts = null;
 
-  /** "아빠 이름에서 '은' · 엄마 이름에서 '진'" 꼴로 적어 준다. */
-  function inheritedNote(inherited) {
-    if (!inherited || !inherited.length) return "";
-    const seen = new Set();
-    const parts = [];
-    for (const p of inherited) {
-      const key = p.who + p.syl;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      parts.push(p.who + " 이름에서 \u2018" + p.syl + "\u2019");
-    }
-    return parts.join("   ·   ");
-  }
-
   function openModal(result, opts) {
     current = { result, opts };
     const hanjaEl = $("modalHanja");
@@ -1147,9 +1158,7 @@
          한자 자리가 비니, 물려받은 글자가 있으면 그 자리에 적어 드린다. */
       $("modalTag").hidden = false;
       hanjaEl.textContent = "";
-      /* 0%는 부모님과 상관없이 짓는 단이다. 어쩌다 글자가 겹쳤다고
-         물려받았다 적으면 거짓말이 된다. */
-      charsEl.textContent = result.wantParent > 0 ? inheritedNote(result.inherited) : "";
+      charsEl.textContent = "";
       meaningEl.textContent = result.pure ? result.pure.d : "";
     } else {
       $("modalTag").hidden = true;
