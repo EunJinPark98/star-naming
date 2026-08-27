@@ -1107,10 +1107,7 @@
         }
 
         /* 더 지어 드릴 이름이 없다. 이름 없이 안내만 단독으로 보여 준다. */
-        showExhausted(
-          "지어 드릴 수 있는 이름 " + shown.size + "개를 모두 보여 드렸어요. " +
-          "확인을 누르면 지금까지 본 이름을 지우고 처음부터 다시 지어 드려요."
-        );
+        showExhausted("지어 드릴 수 있는 이름을 모두 보여 드렸어요.");
         return;
       }
 
@@ -1151,11 +1148,14 @@
     run(lastOpts, true);
   });
 
+  /* 지금까지 본 이름을 지우고 곧바로 처음부터 다시 지어 준다 */
   $("exhaustedOkBtn").addEventListener("click", () => {
     if (shownKey) clearShown(shownKey);
     shown = new Set();
-    if (lastOpts) lastOpts.exclude = shown;
     $("modal").hidden = true;
+    if (!lastOpts) return;
+    lastOpts.exclude = shown;
+    run(lastOpts, true);
   });
 
   /* ── 공유 ─────────────────────────────────── */

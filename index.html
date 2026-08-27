@@ -387,10 +387,21 @@
     </div>
 
     <div id="modalExhausted" class="modal__exhausted" hidden>
-      <p class="modal__exhausted-icon" aria-hidden="true">✦</p>
+      <div class="constel" aria-hidden="true">
+        <svg class="constel__lines" viewBox="0 0 300 130" preserveAspectRatio="none">
+          <polyline points="26,86 90,30 152,94 214,36 276,78" />
+        </svg>
+        <span class="constel__g constel__g--1">恩</span>
+        <span class="constel__g constel__g--2">星</span>
+        <span class="constel__g constel__g--3">珍</span>
+        <span class="constel__g constel__g--4">賢</span>
+        <span class="constel__g constel__g--5">昊</span>
+        <i class="constel__spark constel__spark--a">✦</i>
+        <i class="constel__spark constel__spark--b">✧</i>
+      </div>
       <p id="modalExhaustedText" class="modal__exhausted-text"></p>
       <button type="button" id="exhaustedOkBtn" class="btn btn--gold btn--big">
-        <span>확인</span>
+        <span>다시 보기</span>
       </button>
     </div>
   </div>
