@@ -250,8 +250,13 @@ a { color: inherit; }
 .surtick.is-off { cursor: not-allowed; }
 .surtick.is-off span { opacity: 0.38; }
 
-/* 부모 이름이 한자에서 온 게 아닐 때 */
-.hanja-native { display: block; margin-top: 14px; cursor: pointer; user-select: none; }
+/* 부모 이름이 한자에서 온 게 아닐 때
+   글자 너비까지만 눌리게 한다. 줄 전체가 눌리면 옆 빈자리를 스치기만 해도
+   켜져 버린다. */
+.hanja-native {
+  display: block; width: fit-content; max-width: 100%;
+  margin-top: 14px; cursor: pointer; user-select: none;
+}
 .hanja-native input { position: absolute; opacity: 0; pointer-events: none; }
 .hanja-native span {
   display: inline-flex; align-items: center; gap: 7px;
@@ -296,7 +301,9 @@ select option { background: #12131c; color: var(--text); }
 
 .hanja-pick { margin-top: 16px; }
 
-.hgroup__row { display: flex; flex-wrap: wrap; gap: 10px 12px; }
+/* 칸마다 높이가 다르다(직접 입력 칸과 안내글이 붙는 쪽이 길다).
+   윗변을 맞춰 두지 않으면 짧은 쪽이 가운데로 내려와 어긋나 보인다. */
+.hgroup__row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 12px; }
 
 .hrow {
   display: flex; align-items: center; flex-wrap: wrap;
