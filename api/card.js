@@ -16,11 +16,17 @@ const path = require("path");
 const { createCanvas, GlobalFonts } = require("@napi-rs/canvas");
 
 const FONT = "ByeolCard";
+/* 뒤에 세우는 글꼴. 한국어에 쓰는 한자만 담은 앞 글꼴에 없는 글자
+   (忯 · 㴗 처럼 부모님 이름에나 나오는 것)를 여기서 찾는다.
+   본디 같은 글꼴이라(Noto Serif CJK KR = Source Han Serif K) 티가 안 난다. */
+const FONT_TAIL = "ByeolCardTail";
+const FONTS = '"' + FONT + '", "' + FONT_TAIL + '"';
 const W = 1080;
 const H = 1080;
 
 /* 글꼴은 찬 곳에서 한 번만 읽는다 */
 const FONT_FILE = "byeol-card.woff2";
+const TAIL_FILE = "byeol-card-tail.woff2";
 const GLYPH_FILE = "byeol-card-glyphs.txt";
 let fontReady = false;
 
@@ -56,6 +62,18 @@ function loadFont() {
   if (!fontReady) {
     console.error("[card] 글꼴을 찾지 못했습니다. 찾아본 곳:", fontCandidates(FONT_FILE).join(", "));
     return false;
+  }
+  /* 꼬리 글꼴은 없어도 굴러간다. 그 글자만 못 그릴 뿐이다. */
+  for (const file of fontCandidates(TAIL_FILE)) {
+    try {
+      if (fs.existsSync(file)) {
+        GlobalFonts.register(fs.readFileSync(file), FONT_TAIL);
+        console.log("[card] 꼬리 글꼴을 읽었습니다:", file);
+        break;
+      }
+    } catch (e) {
+      console.error("[card] 꼬리 글꼴을 읽지 못했습니다:", file, e.message);
+    }
   }
   if (!drawable) {
     for (const file of fontCandidates(GLYPH_FILE)) {
@@ -203,7 +221,7 @@ function drawCard(o) {
 
   /* 머리말 */
   const head = "별 별  작 명 소";
-  ctx.font = '400 32px "' + FONT + '"';
+  ctx.font = "400 32px " + FONTS;
   ctx.fillStyle = "rgba(245,197,66,0.9)";
   ctx.fillText(head, W / 2, 128);
   const hw = ctx.measureText(head).width;
@@ -226,7 +244,7 @@ function drawCard(o) {
        140 은 그렇게 띄우면서도 뜻이 한자 카드와 같은 높이(769.5)에 오도록
        맞춘 값이다. 위 줄들의 높이를 바꾸면 이 값도 다시 맞춰야 한다. */
     rows.push({ kind: "rule", h: 1, gap: o.pure ? 140 : 66 });
-    ctx.font = '700 46px "' + FONT + '"';
+    ctx.font = "700 46px " + FONTS;
     wrapLines(ctx, o.meaning, W - 220).forEach((line, i) => {
       rows.push({ kind: "meaning", text: line, h: 46, gap: i === 0 ? 66 : 26 });
     });
@@ -238,7 +256,7 @@ function drawCard(o) {
   for (const row of rows) {
     y += row.gap || 0;
     if (row.kind === "badge") {
-      ctx.font = '400 28px "' + FONT + '"';
+      ctx.font = "400 28px " + FONTS;
       const pw = ctx.measureText("순우리말").width + 56;
       const px = (W - pw) / 2;
       ctx.beginPath();
@@ -253,15 +271,15 @@ function drawCard(o) {
       const grad = ctx.createLinearGradient(0, y, 0, y + row.h);
       grad.addColorStop(0, "#ffe9a8");
       grad.addColorStop(1, "#d9a215");
-      ctx.font = '700 132px "' + FONT + '"';
+      ctx.font = "700 132px " + FONTS;
       ctx.fillStyle = grad;
       ctx.fillText(o.name, W / 2, y);
     } else if (row.kind === "hanja") {
-      ctx.font = '700 54px "' + FONT + '"';
+      ctx.font = "700 54px " + FONTS;
       ctx.fillStyle = "#9aa1b0";
       ctx.fillText(row.text, W / 2, y);
     } else if (row.kind === "chars") {
-      ctx.font = '400 32px "' + FONT + '"';
+      ctx.font = "400 32px " + FONTS;
       ctx.fillStyle = "#6e7484";
       ctx.fillText(row.text, W / 2, y);
     } else if (row.kind === "rule") {
@@ -272,14 +290,14 @@ function drawCard(o) {
       ctx.lineWidth = 1.5;
       ctx.stroke();
     } else if (row.kind === "meaning") {
-      ctx.font = '700 46px "' + FONT + '"';
+      ctx.font = "700 46px " + FONTS;
       ctx.fillStyle = "#ffe9a8";
       ctx.fillText(row.text, W / 2, y);
     }
     y += row.h;
   }
 
-  ctx.font = '400 28px "' + FONT + '"';
+  ctx.font = "400 28px " + FONTS;
   ctx.fillStyle = "rgba(154,161,176,0.75)";
   ctx.fillText("naming.byeolmamapapa.com", W / 2, H - 96);
 

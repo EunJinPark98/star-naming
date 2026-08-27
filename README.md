@@ -172,14 +172,23 @@ npx vercel dev
 
 ```bash
 # 사전에 한자를 더한 뒤에는 다시 만들어 주세요.
-# 원본 글꼴이 필요하니 먼저 받아 둡니다.
-npm i --no-save @fontsource/gowun-batang @fontsource/noto-serif-kr
+# 원본 글꼴이 필요하니 먼저 받아 둡니다. (마지막 것은 160MB 남짓입니다)
+npm i --no-save @fontsource/gowun-batang @fontsource/noto-serif-kr \
+                @fontpkg/source-han-serif-k
 python3 tools/build-card-font.py api/fonts/byeol-card.woff2
 ```
 
-글꼴에는 사전의 한자뿐 아니라 **Noto Serif KR 이 가진 한자 전부**(4,644자)를
-담습니다. 부모님에게서 물려받은 글자도 카드에 오르는데, 그 글자는 사전
-밖일 수 있기 때문입니다.
+글꼴은 두 벌입니다. 앞은 고운바탕(한글)에 **Noto Serif KR 의 한자
+4,644자**를 붙인 `byeol-card.woff2`, 뒤는 **Source Han Serif K 에서 뽑은
+나머지 22,560자**를 담은 `byeol-card-tail.woff2` 입니다. 카드는 두 벌을
+차례로 세워 씁니다(`"ByeolCard", "ByeolCardTail"`).
+
+Noto Serif KR 은 한국어에 쓰는 한자만 담고 있어 부모님이 적어 주신 드문
+글자(忯 · 㴗)가 빠집니다. 둘은 본디 같은 글꼴이라(Noto Serif CJK KR =
+Source Han Serif K) 나란히 놓아도 티가 나지 않습니다. 한 파일로 합치지
+않는 것은 바깥 모양을 담는 방식이 달라서입니다(glyf ↔ CFF).
+
+뒤 글꼴은 자리잡기·힌팅 표를 덜어 5.2MB 로 담았습니다(그대로면 13.5MB).
 
 만들 때 `byeol-card-glyphs.txt` 도 함께 나옵니다. 이 글꼴로 그릴 수 있는 한자
 목록이고, `/api/card` 가 이것을 보고 못 그릴 한자가 섞였으면 **한자 줄을 통째로

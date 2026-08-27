@@ -1228,8 +1228,8 @@
    *
    * 창을 닫았다 열어도 앞서 나온 이름은 다시 내놓지 않는다.
    * 부모 이름이 바뀌면 다른 이야기이므로 그 조합마다 따로 담아 둔다.
-   * 브라우저가 저장을 막아 두었으면(사생활 보호 창 등) 조용히 넘기고
-   * 이번 판 동안만 기억한다.
+   * 창을 닫으면 잊는다. 브라우저가 저장을 막아 두었으면(사생활 보호 창 등)
+   * 조용히 넘기고 이번 판 동안만 기억한다.
    */
 
   const HISTORY_KEY = "byeolStarNaming.shown.v1";
@@ -1238,9 +1238,18 @@
   /** 부모 조합 수. 넘치면 가장 오래 안 쓴 것부터 잊는다. */
   const HISTORY_KEYS_MAX = 20;
 
+  /* 창을 닫으면 잊는다(sessionStorage). 며칠 뒤에 다시 오셨는데 "모두
+     보여 드렸어요"부터 뜨면 막다른 길처럼 느껴지기 때문이다. 새로고침이나
+     뒤로 가기로는 지워지지 않으니 한 번 앉은 자리에서는 이어진다. */
   function loadHistory() {
     try {
-      const raw = localStorage.getItem(HISTORY_KEY);
+      /* 예전에 localStorage 에 남겨 둔 것이 있으면 치운다 */
+      localStorage.removeItem(HISTORY_KEY);
+    } catch (e) {
+      /* 못 지워도 그만 — 이제 읽지 않는다 */
+    }
+    try {
+      const raw = sessionStorage.getItem(HISTORY_KEY);
       const all = raw ? JSON.parse(raw) : null;
       return all && typeof all === "object" ? all : {};
     } catch (e) {
@@ -1250,7 +1259,7 @@
 
   function saveHistory(all) {
     try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(all));
+      sessionStorage.setItem(HISTORY_KEY, JSON.stringify(all));
     } catch (e) {
       /* 저장할 수 없으면 이번 판 동안만 기억한다 */
     }
@@ -1565,7 +1574,7 @@
       return;
     }
 
-    /* 앞선 방문에서 보여 드린 이름까지 이어서 뺀다 */
+    /* 이 창에서 이미 보여 드린 이름은 빼고 짓는다 */
     shownKey = opts.key;
     shown = readShown(shownKey);
     opts.exclude = shown;

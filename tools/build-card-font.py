@@ -15,6 +15,7 @@ DATA_JS = os.path.join(ROOT, "data.js")
 HUN_JSON = os.path.join(ROOT, "hanja-hun.json")
 GOWUN = "node_modules/@fontsource/gowun-batang/files/gowun-batang-korean-700-normal.woff2"
 NOTO = sorted(glob.glob("node_modules/@fontsource/noto-serif-kr/files/*700-normal.woff2"))
+SHS = "node_modules/@fontpkg/source-han-serif-k/SourceHanSerifK-Bold.otf"
 
 # 앱 사전에 쓰인 한자에, 부모님이 적어 주실 수 있는 한자까지 담는다.
 # 물려받은 글자도 카드에 오르는데, 그 글자는 사전 밖일 수 있다.
@@ -102,11 +103,48 @@ merged.save(OUT)
 cov = set()
 for t in merged["cmap"].tables:
     cov |= set(t.cmap.keys())
+merged.close()
+
+# ── 꼬리 글꼴 ────────────────────────────────────────────
+#
+# Noto Serif KR 은 한국어에 쓰는 한자 4,644자만 담고 있어, 부모님이
+# 적어 주신 드문 글자(忯 · 㴗)가 빠진다. 나머지는 Source Han Serif K
+# 에서 뽑아 딴 파일로 만들어 뒤에 세운다. 둘은 본디 같은 글꼴이라
+# (Noto Serif CJK KR = Source Han Serif K) 나란히 놓아도 티가 나지 않는다.
+#
+# 한 파일로 합치지 않는 것은 바깥 모양을 담는 방식이 달라서다(glyf ↔ CFF).
+# 대신 카드 쪽에서 글꼴 목록으로 이어 쓴다.
+
+tail_want = {ord(c) for c in hanja} - cov
+tail_out = os.path.splitext(OUT)[0] + "-tail.woff2"
+if tail_want and os.path.exists(SHS):
+    tf = TTFont(SHS, fontNumber=0)
+    tail_have = set()
+    for t in tf["cmap"].tables:
+        tail_have |= set(t.cmap.keys())
+    keep = tail_want & tail_have
+    if keep:
+        o = Options()
+        # 자리잡기·힌팅 표는 카드에 쓸 일이 없다. 13MB 가 5MB 로 준다.
+        o.drop_tables += ["DSIG", "GSUB", "GPOS", "GDEF", "hdmx", "VDMX", "VORG"]
+        o.name_IDs = []
+        o.notdef_outline = False
+        o.layout_features = []
+        o.hinting = False
+        s = Subsetter(options=o)
+        s.populate(unicodes=keep)
+        s.subset(tf)
+        tf.flavor = "woff2"
+        tf.save(tail_out)
+        cov |= keep
+        print("=> %s  %d자  %.1f MB" % (tail_out, len(keep), os.path.getsize(tail_out) / 1024 / 1024))
+    tf.close()
+elif not os.path.exists(SHS):
+    print("!! Source Han Serif K 가 없어 꼬리 글꼴을 만들지 못했습니다:", SHS)
+
 cjk = "".join(chr(c) for c in sorted(cov) if c > 0x2E7F and not (0xAC00 <= c <= 0xD7A3))
 glyph_file = os.path.splitext(OUT)[0] + "-glyphs.txt"
 open(glyph_file, "w", encoding="utf-8").write(cjk)
 print("=> %s  %d자" % (glyph_file, len(cjk)))
-
-merged.close()
 shutil.rmtree(tmp, ignore_errors=True)
 print("=> %s  %.0f KB" % (OUT, os.path.getsize(OUT) / 1024))
