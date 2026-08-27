@@ -183,8 +183,10 @@ function drawCard(o) {
     rows.push({ kind: "chars", text: o.readings.join("   ·   "), h: 32, gap: 38 });
   }
   if (o.meaning) {
-    /* 순우리말은 이름 아래에 한자 줄이 없어 허전하니 더 띄운다 */
-    rows.push({ kind: "rule", h: 1, gap: o.pure ? 198 : 66 });
+    /* 순우리말은 이름 아래에 한자 줄과 뜻풀이가 없어 허전하니 더 띄운다.
+       140 은 그렇게 띄우면서도 뜻이 한자 카드와 같은 높이(769.5)에 오도록
+       맞춘 값이다. 위 줄들의 높이를 바꾸면 이 값도 다시 맞춰야 한다. */
+    rows.push({ kind: "rule", h: 1, gap: o.pure ? 140 : 66 });
     ctx.font = '700 46px "' + FONT + '"';
     wrapLines(ctx, o.meaning, W - 220).forEach((line, i) => {
       rows.push({ kind: "meaning", text: line, h: 46, gap: i === 0 ? 66 : 26 });
