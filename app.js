@@ -514,7 +514,7 @@
         const sampleC = entry ? entry.h[0].c : "恩";
         const sampleH = (entry ? hunOf(sampleC, syl) : "") || (entry ? entry.h[0].m : "은혜");
         /* 한자를 알면 그대로, 뜻만 알면 뜻으로 — 두 길을 다 보여 준다 */
-        custom.placeholder = "한자 " + sampleC + "  ·  뜻 " + sampleH;
+        custom.placeholder = sampleC + "  ·  " + sampleH;
         custom.maxLength = 12;
         /* 딸린 이름표가 없는 칸이라, 읽어 주는 이름을 붙여 둔다 */
         custom.setAttribute("aria-label", who + " 이름 '" + syl + "' 의 한자 직접 입력");
@@ -640,7 +640,7 @@
         const refresh = () => {
           const c = entry ? entry.h[0].c : "恩";
           const h = (entry ? hunOf(c, syl) : "") || (entry ? entry.h[0].m : "은혜");
-          custom.placeholder = "한자 " + c + "  ·  뜻 " + h;
+          custom.placeholder = c + "  ·  " + h;
           syncNote();
         };
 
