@@ -1270,23 +1270,23 @@
        이름 길이나 뜻 줄 수가 달라도 빈 자리가 한쪽으로 쏠리지 않는다. */
     const rows = [];
     if (isPure) rows.push({ kind: "badge", h: 52 });
-    rows.push({ kind: "name", h: 132, gap: isPure ? 30 : 0 });
+    rows.push({ kind: "name", h: 132, gap: isPure ? 44 : 0 });
 
     if (!isPure) {
       const hanja = r.slots.map((s) => s.hanja && s.hanja.c).filter(Boolean).join("");
-      if (hanja) rows.push({ kind: "hanja", text: hanja, h: 54, gap: 26 });
+      if (hanja) rows.push({ kind: "hanja", text: hanja, h: 54, gap: 46 });
       const parts = r.slots
         .filter((s) => s.hanja && s.hanja.m && s.hanja.m !== "뜻 모름" && s.hanja.c)
         .map((s) => s.hanja.m + " " + s.syl + " " + s.hanja.c);
-      if (parts.length) rows.push({ kind: "chars", text: parts.join("   ·   "), h: 32, gap: 24 });
+      if (parts.length) rows.push({ kind: "chars", text: parts.join("   ·   "), h: 32, gap: 38 });
     }
 
     const meaning = meaningPlain();
     if (meaning) {
-      rows.push({ kind: "rule", h: 1, gap: 40 });
+      rows.push({ kind: "rule", h: 1, gap: 66 });
       ctx.font = MEAN;
       wrapLines(ctx, meaning, W - 220).forEach((line, i) => {
-        rows.push({ kind: "meaning", text: line, h: 46, gap: i === 0 ? 44 : 16 });
+        rows.push({ kind: "meaning", text: line, h: 46, gap: i === 0 ? 66 : 26 });
       });
     }
 

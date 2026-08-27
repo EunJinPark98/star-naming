@@ -177,16 +177,16 @@ function drawCard(o) {
   /* 담을 줄을 먼저 모아 두고 가운데에 놓는다 */
   const rows = [];
   if (o.pure) rows.push({ kind: "badge", h: 52 });
-  rows.push({ kind: "name", h: 132, gap: o.pure ? 30 : 0 });
-  if (o.hanja) rows.push({ kind: "hanja", text: o.hanja, h: 54, gap: 26 });
+  rows.push({ kind: "name", h: 132, gap: o.pure ? 44 : 0 });
+  if (o.hanja) rows.push({ kind: "hanja", text: o.hanja, h: 54, gap: 46 });
   if (o.readings.length) {
-    rows.push({ kind: "chars", text: o.readings.join("   ·   "), h: 32, gap: 24 });
+    rows.push({ kind: "chars", text: o.readings.join("   ·   "), h: 32, gap: 38 });
   }
   if (o.meaning) {
-    rows.push({ kind: "rule", h: 1, gap: 40 });
+    rows.push({ kind: "rule", h: 1, gap: 66 });
     ctx.font = '700 46px "' + FONT + '"';
     wrapLines(ctx, o.meaning, W - 220).forEach((line, i) => {
-      rows.push({ kind: "meaning", text: line, h: 46, gap: i === 0 ? 44 : 16 });
+      rows.push({ kind: "meaning", text: line, h: 46, gap: i === 0 ? 66 : 26 });
     });
   }
 
