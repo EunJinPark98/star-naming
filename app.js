@@ -1351,8 +1351,8 @@
     el.textContent = msg;
     el.hidden = false;
     clearTimeout(toastTimer);
-    /* 안내가 길어질 때가 있어 읽을 틈을 준다 */
-    toastTimer = setTimeout(() => (el.hidden = true), 3600);
+    /* 안내가 길어질 때가 있어 넉넉히 읽을 틈을 준다 */
+    toastTimer = setTimeout(() => (el.hidden = true), 6500);
   }
 
   /* ── 제출 ─────────────────────────────────── */
@@ -1525,7 +1525,7 @@
             ? "닮음 " + opts.simil + "%로 지을 순우리말 이름은 이미 다 보여 드려서, 조건을 풀고 지었어요."
             : result.gotParent > 0
             ? "두 분 글자를 다 품은 순우리말 이름이 없어, 한 글자만 물려받았어요."
-            : "부모님 이름 글자를 품은 순우리말 이름이 없어, 닮음을 풀고 지었어요."
+            : "부모님 이름 글자를 품은 순우리말 이름이 없어, 새로 지었어요."
         );
       }
     }, wait);
