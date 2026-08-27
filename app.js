@@ -94,13 +94,23 @@
 
   /* ── 직접 적은 한자 읽기 ──────────────────── */
 
-  const CJK = /[一-鿿㐀-䶿豈-﫿]/;
+  /* 겉모습이 같은 다른 글자를 잘못 집지 않도록 번호로 적는다 */
+  const CJK = /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]/;
 
   /** 한자 한 글자로 사전을 뒤지기 위한 색인 */
   const HANJA_INDEX = (() => {
     const idx = {};
     for (const syl of Object.keys(SYL)) {
       for (const h of SYL[syl].h) if (!idx[h.c]) idx[h.c] = h;
+    }
+    return idx;
+  })();
+
+  /** 그 한자를 어떻게 읽는지. 樂(락·악)처럼 여럿일 수 있다. */
+  const HANJA_READINGS = (() => {
+    const idx = {};
+    for (const syl of Object.keys(SYL)) {
+      for (const h of SYL[syl].h) (idx[h.c] = idx[h.c] || []).push(syl);
     }
     return idx;
   })();
@@ -112,6 +122,15 @@
     if (!ch || !isHangulSyllable(ch)) return "";
     return JONG[(ch.charCodeAt(0) - 0xac00) % 28];
   }
+
+  /** 받침에 맞춰 "로 / 으로"를 고른다. 지로 · 성으로 처럼. */
+  function ro(word) {
+    const jong = jongOf(word);
+    return !jong || jong === "ㄹ" ? "로" : "으로";
+  }
+
+  /** 받침에 맞춰 "은 / 는"을 고른다. 성은 · 지는 처럼. */
+  const eun = (word) => (jongOf(word) ? "은" : "는");
 
   /** 끝 받침을 바꾼 말을 만든다. 빛남 ↔ 빛날 처럼. */
   function swapJong(word, from, to) {
@@ -250,7 +269,7 @@
         }
         const own = document.createElement("option");
         own.value = "custom";
-        own.textContent = entry ? "✎ 직접 입력" : "✎ 직접 입력 (사전에 없는 글자)";
+        own.textContent = entry ? "✎ 직접 입력" : "✎ 한자 직접 입력";
         sel.append(own);
 
         /* 사전에 없는 글자는 처음부터 직접 입력으로 연다 */
@@ -284,14 +303,31 @@
             note.textContent = "";
             note.hidden = true;
           } else if (!parsed.custom) {
-            note.textContent = "✓ 사전에서 찾았어요 — " + parsed.c + " · " + parsed.m + " " + syl;
-            note.className = "hrow__note is-ok";
+            /* 지 자리에 盛(성)을 적는 것처럼, 읽는 소리가 어긋나면 짚어 드린다.
+               잘못 적으신 것일 수도 있고, 우리가 모르는 읽기일 수도 있어
+               막지는 않는다. */
+            const reads = HANJA_READINGS[parsed.c] || [];
+            if (reads.length && reads.indexOf(syl) < 0) {
+              note.textContent =
+                parsed.c + " " + eun(reads[0]) + " '" + reads.join("' · '") + "'" +
+                ro(reads[reads.length - 1]) + " 읽어요. '" + syl +
+                "' 자리가 맞나요? 그대로 쓰셔도 됩니다.";
+              note.className = "hrow__note is-warn";
+            } else {
+              note.textContent = "✓ 사전에서 찾았어요 — " + parsed.c + " · " + parsed.m + " " + syl;
+              note.className = "hrow__note is-ok";
+            }
           } else if (parsed.c && parsed.m !== "뜻 모름") {
-            note.textContent = "✓ " + parsed.c + " · " + parsed.m + " " + syl + " 으로 씁니다";
+            note.textContent = "✓ " + parsed.c + " · " + parsed.m + " " + syl + ro(syl) + " 씁니다";
             note.className = "hrow__note is-ok";
           } else if (parsed.c) {
-            note.textContent = "사전에 없는 한자예요. 뜻도 같이 적어 주시면 뜻풀이를 만들어 드려요. (예: " + parsed.c + " 빛날)";
-            note.className = "hrow__note is-warn";
+            /* 글자는 그대로 쓴다. 우리가 뜻을 모를 뿐이라는 것을 분명히 한다.
+               보기로 그분의 한자를 다시 보여 주면 엉뚱한 뜻을 붙인 것처럼
+               읽히므로, 붙박이 보기를 쓴다. */
+            note.textContent =
+              "✓ " + parsed.c + ro(syl) + " 씁니다. 뜻만 저희가 몰라요 — " +
+              "뒤에 뜻도 적어 주세요. (예: 一 하나)";
+            note.className = "hrow__note is-ok";
           } else {
             note.textContent = "한자를 함께 적어 주세요. 뜻만으로는 한자 이름을 만들 수 없어요.";
             note.className = "hrow__note is-warn";

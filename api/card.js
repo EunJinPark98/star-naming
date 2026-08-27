@@ -21,34 +21,68 @@ const H = 1080;
 
 /* 글꼴은 찬 곳에서 한 번만 읽는다 */
 const FONT_FILE = "byeol-card.woff2";
+const GLYPH_FILE = "byeol-card-glyphs.txt";
 let fontReady = false;
 
-function fontCandidates() {
+/* 이 글꼴로 그릴 수 있는 한자. tools/build-card-font.py 가 함께 적어 둔다.
+   이용자가 직접 적은 한자는 여기에 없을 수 있는데, 없는 글자를 그리면
+   두부(□)가 되므로 미리 살펴보고 한자 줄을 통째로 접는다. */
+let drawable = null;
+
+function fontCandidates(name) {
   return [
-    path.join(__dirname, "fonts", FONT_FILE),
-    path.join(process.cwd(), "api/fonts", FONT_FILE),
-    path.join(process.cwd(), "fonts", FONT_FILE),
-    path.join("/var/task/api/fonts", FONT_FILE),
+    path.join(__dirname, "fonts", name),
+    path.join(process.cwd(), "api/fonts", name),
+    path.join(process.cwd(), "fonts", name),
+    path.join("/var/task/api/fonts", name),
   ];
 }
 
 function loadFont() {
   if (fontReady) return true;
-  for (const file of fontCandidates()) {
+  for (const file of fontCandidates(FONT_FILE)) {
     try {
       if (fs.existsSync(file)) {
         GlobalFonts.register(fs.readFileSync(file), FONT);
         fontReady = true;
         /* 어느 자리에서 읽었는지는 배포 로그에만 남긴다 */
         console.log("[card] 글꼴을 읽었습니다:", file);
-        return true;
+        break;
       }
     } catch (e) {
       console.error("[card] 글꼴을 읽지 못했습니다:", file, e.message);
     }
   }
-  console.error("[card] 글꼴을 찾지 못했습니다. 찾아본 곳:", fontCandidates().join(", "));
-  return false;
+  if (!fontReady) {
+    console.error("[card] 글꼴을 찾지 못했습니다. 찾아본 곳:", fontCandidates(FONT_FILE).join(", "));
+    return false;
+  }
+  if (!drawable) {
+    for (const file of fontCandidates(GLYPH_FILE)) {
+      try {
+        if (fs.existsSync(file)) {
+          drawable = new Set(fs.readFileSync(file, "utf-8").trim());
+          break;
+        }
+      } catch (e) {
+        console.error("[card] 글자 목록을 읽지 못했습니다:", file, e.message);
+      }
+    }
+    if (!drawable) {
+      /* 목록이 없으면 한자를 못 그린다고 보지 않고 그냥 그린다 */
+      console.error("[card] 글자 목록을 찾지 못했습니다. 한자를 그대로 그립니다.");
+      drawable = new Set();
+    }
+  }
+  return true;
+}
+
+/** 이 글의 한자를 다 그릴 수 있는가. 한글과 문장부호는 언제나 그릴 수 있다. */
+const CJK_ONE = /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]/;
+function canDraw(text) {
+  if (!drawable || !drawable.size) return true;
+  for (const ch of text) if (CJK_ONE.test(ch) && !drawable.has(ch)) return false;
+  return true;
 }
 
 /* ── 들어온 값 살피기 ────────────────────────────
@@ -57,10 +91,12 @@ function loadFont() {
  * 그림으로 엉뚱한 말을 퍼뜨릴 수 있으니, 이름은 한글, 한자는 한자,
  * 뜻은 한글과 몇몇 문장부호까지만 받고 길이도 잘라 둔다.
  */
+/* 한자 범위는 글자로 적으면 豈(U+F900)처럼 겉모습이 같은 다른 글자를 잘못
+   집어 범위가 한글까지 삼킬 수 있어, 번호로 적는다 */
 const HANGUL = /^[가-힣]{1,8}$/;
-const HANJA = /^[一-鿿㐀-䶿豈-﫿]{1,8}$/;
+const HANJA = /^[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]{1,8}$/;
 const MEANING = /^[가-힣0-9 ,.·()]{1,40}$/;
-const READING = /^[가-힣 ]{1,14}[一-鿿㐀-䶿豈-﫿]$/;
+const READING = /^[가-힣 ]{1,14}[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]$/;
 
 const clean = (v) => (typeof v === "string" ? v.trim().replace(/\s+/g, " ") : "");
 
@@ -174,12 +210,15 @@ function drawCard(o) {
   drawSpark(ctx, W / 2 - hw / 2 - 34, 145, 11);
   drawSpark(ctx, W / 2 + hw / 2 + 34, 145, 11);
 
-  /* 담을 줄을 먼저 모아 두고 가운데에 놓는다 */
+  /* 담을 줄을 먼저 모아 두고 가운데에 놓는다.
+     그릴 수 없는 한자가 섞였으면 한자 줄과 뜻 줄을 함께 접는다.
+     한 글자만 빼면 이름이 잘못 적힌 것처럼 보이기 때문이다. */
+  const hanjaOk = canDraw(o.hanja + o.readings.join(""));
   const rows = [];
   if (o.pure) rows.push({ kind: "badge", h: 52 });
   rows.push({ kind: "name", h: 132, gap: o.pure ? 44 : 0 });
-  if (o.hanja) rows.push({ kind: "hanja", text: o.hanja, h: 54, gap: 46 });
-  if (o.readings.length) {
+  if (o.hanja && hanjaOk) rows.push({ kind: "hanja", text: o.hanja, h: 54, gap: 46 });
+  if (o.readings.length && hanjaOk) {
     rows.push({ kind: "chars", text: o.readings.join("   ·   "), h: 32, gap: 38 });
   }
   if (o.meaning) {

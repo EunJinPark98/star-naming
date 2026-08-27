@@ -114,8 +114,14 @@ npm i --no-save @fontsource/gowun-batang @fontsource/noto-serif-kr
 python3 tools/build-card-font.py api/fonts/byeol-card.woff2
 ```
 
-Noto Serif KR 에 없는 한자는 만들 때 `!! 빠진 한자:` 로 알려 줍니다.
-그대로 두면 카드에서 두부(□)로 나오니 사전에서 빼거나 다른 글자로 바꿔 주세요.
+만들 때 `byeol-card-glyphs.txt` 도 함께 나옵니다. 이 글꼴로 그릴 수 있는 한자
+목록이고, `/api/card` 가 이것을 보고 못 그릴 한자가 섞였으면 **한자 줄을 통째로
+접습니다**. 한 글자만 빼면 이름이 잘못 적힌 것처럼 보이기 때문입니다. 이름과
+뜻풀이는 그대로 나옵니다.
+
+그래서 Noto Serif KR 에 없는 한자(만들 때 `!! 빠진 한자:` 로 알려 줍니다)를
+사전에 두어도 두부(□)가 나오지는 않습니다. 다만 그 이름은 카드에서 한자를
+못 보여 주니, 되도록 그릴 수 있는 글자로 담아 주세요.
 
 ## 배포 (Vercel)
 

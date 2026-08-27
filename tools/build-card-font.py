@@ -80,6 +80,18 @@ merged["name"].setName("Byeol Card", 4, 3, 1, 0x409)
 merged["name"].setName("ByeolCard-Regular", 6, 3, 1, 0x409)
 merged.flavor = "woff2"   # 함수에 딸려 보내는 파일이라 눌러서 담는다
 merged.save(OUT)
+
+# 어떤 한자를 그릴 수 있는지 함께 적어 둔다.
+# 이용자가 직접 적은 한자는 사전에 없을 수 있고, 없는 글자를 그리면 두부(□)가
+# 되므로, 카드 쪽에서 미리 살펴보고 한자 줄을 통째로 접을 수 있게 한다.
+cov = set()
+for t in merged["cmap"].tables:
+    cov |= set(t.cmap.keys())
+cjk = "".join(chr(c) for c in sorted(cov) if c > 0x2E7F and not (0xAC00 <= c <= 0xD7A3))
+glyph_file = os.path.splitext(OUT)[0] + "-glyphs.txt"
+open(glyph_file, "w", encoding="utf-8").write(cjk)
+print("=> %s  %d자" % (glyph_file, len(cjk)))
+
 merged.close()
 shutil.rmtree(tmp, ignore_errors=True)
 print("=> %s  %.0f KB" % (OUT, os.path.getsize(OUT) / 1024))
