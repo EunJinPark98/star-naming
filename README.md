@@ -135,6 +135,12 @@ python3 tools/build-card-font.py api/fonts/byeol-card.woff2
 `vercel.json` 에 글꼴 파일을 함수에 딸려 보내는 설정이 들어 있습니다.
 `@napi-rs/canvas` 는 네이티브 라이브러리라 **Node 런타임**에서만 돕니다.
 
+**고친 것이 안 보일 때** — `index.html` 은 늘 새로 확인하도록 `vercel.json` 에
+`Cache-Control: max-age=0, must-revalidate` 를 걸어 두었습니다. 화면 파일이
+묵으면 `styles.css?v=…` 를 올려도 브라우저가 옛 주소만 계속 불러서, 고친
+것이 닿지 않습니다. css · js 를 고쳤으면 `index.html` 의 `?v=` 도 함께
+올려 주세요.
+
 ## 도메인 (naming.byeolmamapapa.com)
 
 **DNS (도메인 구입처에서)**
