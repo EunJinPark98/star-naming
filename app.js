@@ -1283,7 +1283,8 @@
 
     const meaning = meaningPlain();
     if (meaning) {
-      rows.push({ kind: "rule", h: 1, gap: 66 });
+      /* 순우리말은 이름 아래에 한자 줄이 없어 허전하니 더 띄운다 */
+      rows.push({ kind: "rule", h: 1, gap: isPure ? 198 : 66 });
       ctx.font = MEAN;
       wrapLines(ctx, meaning, W - 220).forEach((line, i) => {
         rows.push({ kind: "meaning", text: line, h: 46, gap: i === 0 ? 66 : 26 });

@@ -183,7 +183,8 @@ function drawCard(o) {
     rows.push({ kind: "chars", text: o.readings.join("   ·   "), h: 32, gap: 38 });
   }
   if (o.meaning) {
-    rows.push({ kind: "rule", h: 1, gap: 66 });
+    /* 순우리말은 이름 아래에 한자 줄이 없어 허전하니 더 띄운다 */
+    rows.push({ kind: "rule", h: 1, gap: o.pure ? 198 : 66 });
     ctx.font = '700 46px "' + FONT + '"';
     wrapLines(ctx, o.meaning, W - 220).forEach((line, i) => {
       rows.push({ kind: "meaning", text: line, h: 46, gap: i === 0 ? 66 : 26 });
