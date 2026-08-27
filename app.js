@@ -468,6 +468,19 @@
   /** 아이 이름 후보로 쓸 한자 글자. 부모님 세대 글자(o)는 뺀다. */
   const POOL_HANJA = Object.keys(SYL).filter((s) => !SYL[s].o);
 
+  /**
+   * 그 소리를 아이 이름에 쓸 때 고를 수 있는 한자.
+   *
+   * 사전에는 부모님 이름을 읽어 드리려고 담아 둔 한자(x)도 함께 있다.
+   * 어른 이름에는 흔해도 요즘 아이 이름으로는 잘 쓰지 않는 글자라,
+   * 새로 지을 때는 뺀다. 물려받는 글자는 부모님이 고른 그대로 쓴다.
+   */
+  const childHanja = (syl) => {
+    const all = (SYL[syl] && SYL[syl].h) || [];
+    const open = all.filter((h) => !h.x);
+    return open.length ? open : all;
+  };
+
   /** 글자 정보. 한자 사전에 없으면 순우리말 사전에서 찾는다. */
   const info = (syl) => SYL[syl] || PURE[syl] || null;
 
@@ -742,7 +755,7 @@
           if (keep.gender && !genderOk(s, o.gender)) return false;
           if (keep.pos && !posOk(s, i, o.len)) return false;
           if (!chosungOk(s, i, o.chosung)) return false;
-          if (tagLeft > 0 && !(SYL[s] && SYL[s].h.some((h) => parentTags.includes(h.t)))) return false;
+          if (tagLeft > 0 && !childHanja(s).some((h) => parentTags.includes(h.t))) return false;
           return true;
         });
         if (!cands.length) {
@@ -751,7 +764,7 @@
         }
         const syl = cands[(Math.random() * cands.length) | 0];
 
-        let hs = SYL[syl].h;
+        let hs = childHanja(syl);
         if (tagLeft > 0) {
           const tagged = hs.filter((h) => parentTags.includes(h.t));
           if (tagged.length) {

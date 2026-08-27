@@ -78,6 +78,7 @@ merged = merger.merge(parts)
 merged["name"].setName("Byeol Card", 1, 3, 1, 0x409)
 merged["name"].setName("Byeol Card", 4, 3, 1, 0x409)
 merged["name"].setName("ByeolCard-Regular", 6, 3, 1, 0x409)
+merged.flavor = "woff2"   # 함수에 딸려 보내는 파일이라 눌러서 담는다
 merged.save(OUT)
 merged.close()
 shutil.rmtree(tmp, ignore_errors=True)
