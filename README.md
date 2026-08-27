@@ -67,39 +67,68 @@ assets/      로고
 
 ## 로컬에서 보기
 
+이름 짓기 화면만 볼 때는 정적 서버로 충분합니다.
+
 ```bash
 python3 -m http.server 8000
 # http://localhost:8000
 ```
 
-## 배포
+결과 카드 그림(`/api/card`)까지 보려면 Vercel CLI 를 씁니다.
 
-저장소 **Settings → Pages → Source**를 `GitHub Actions`로 두면 끝입니다.
-이후 `main`에 push할 때마다 워크플로가 알아서 배포합니다.
+```bash
+npm install
+npx vercel dev
+```
+
+## 결과 카드 그림 (`/api/card`)
+
+카카오톡 공유 카드에 들어가는 그림은 **카카오 서버가 가져갈 수 있는 주소**라야
+합니다. 그래서 브라우저에서 그린 그림을 그대로 얹지 못하고, 같은 그림을 그려
+주는 자리를 따로 두었습니다.
+
+```
+/api/card?n=김도선&h=道善&r=도리 도 道,착함 선 善&m=올곧고 착한 아이
+```
+
+- 이름은 한글, 한자는 한자, 뜻은 한글과 몇몇 문장부호까지만 받습니다.
+  누구나 부를 수 있는 자리라, 우리 이름표가 박힌 그림으로 엉뚱한 말이
+  퍼지지 않도록 막아 둔 것입니다.
+- 이름이 같으면 별자리까지 같은 그림이 나오므로 오래 담아 두어도 됩니다.
+
+**글꼴** — 고운바탕에는 한자가 없고, 여러 조각을 한 이름으로 등록해도 글자
+범위가 합쳐지지 않습니다. 그래서 고운바탕(한글·라틴)에 이 사전이 쓰는 한자
+287자만 Noto Serif KR 에서 뽑아 붙인 파일을 만들어 씁니다.
+
+```bash
+# 사전에 한자를 더한 뒤에는 다시 만들어 주세요
+cd tools && python3 build-card-font.py ../api/fonts/byeol-card.woff2
+```
+
+## 배포 (Vercel)
+
+`main` 에 push 하면 Vercel 이 알아서 올립니다. 정적 파일은 그대로 서비스하고,
+`api/` 아래는 서버리스 함수로 잡힙니다. 빌드 명령은 없습니다.
+
+`vercel.json` 에 글꼴 파일을 함수에 딸려 보내는 설정이 들어 있습니다.
+`@napi-rs/canvas` 는 네이티브 라이브러리라 **Node 런타임**에서만 돕니다.
 
 ## 도메인 (naming.byeolmamapapa.com)
 
-`CNAME` 파일에 적힌 주소로 서비스합니다. 주소를 바꾸려면 이 파일과 함께
-`index.html`의 canonical · og:url · og:image · JSON-LD, 그리고
-`robots.txt` · `sitemap.xml` 의 주소도 같이 고쳐야 합니다.
-
-**DNS (가비아 등 도메인 구입처에서)**
+**DNS (도메인 구입처에서)**
 
 | 타입 | 호스트 | 값 |
 |---|---|---|
-| CNAME | `naming` | `eunjinpark98.github.io.` |
+| CNAME | `naming` | Vercel 이 Domains 화면에 알려 주는 값 |
 
-서브도메인은 A 레코드가 아니라 **CNAME** 입니다. (A 레코드 네 개는
-`byeolmamapapa.com` 같은 최상위 주소에만 씁니다)
+Vercel 프로젝트 **Settings → Domains** 에 주소를 넣으면 어떤 레코드로 바꿔야
+하는지 알려 줍니다. 서브도메인은 A 레코드가 아니라 **CNAME** 입니다.
 
-**GitHub 쪽**
+> Cloudflare 를 거친다면 그 레코드의 프록시(주황색 구름)를 꺼 두세요.
+> 켜져 있으면 인증서 발급이 막힙니다.
 
-**Settings → Pages → Custom domain** 에 `naming.byeolmamapapa.com` 을 넣고,
-인증서가 발급되면 **Enforce HTTPS** 를 켭니다. 발급까지 몇 분에서 한 시간쯤
-걸립니다.
-
-> 옛 주소 `eunjinpark98.github.io/star-naming` 은 커스텀 도메인을 붙이면
-> GitHub 이 알아서 새 주소로 넘겨 줍니다. 이미 공유된 링크는 끊기지 않습니다.
+주소를 바꾸려면 `index.html` 의 canonical · og:url · og:image · JSON-LD,
+그리고 `robots.txt` · `sitemap.xml` 의 주소도 같이 고쳐야 합니다.
 
 ---
 

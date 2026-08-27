@@ -244,8 +244,8 @@ module.exports = (req, res) => {
   const query = req.query || {};
 
   /* 이 자리가 살아 있는지만 묻는 것. 그림은 그리지 않는다.
-     (아직 GitHub Pages 로 보고 있는 사람에게는 여기가 없으므로,
-      쪽에서 먼저 물어보고 없으면 붙박이 그림으로 돌아간다) */
+     (정적 서버로 띄워 보는 경우처럼 여기가 없을 수 있어서, 쪽에서 먼저
+      물어보고 대답이 없으면 붙박이 대문 그림으로 돌아간다) */
   if (query.ping) {
     res.setHeader("Cache-Control", "public, max-age=300");
     res.status(204).end();

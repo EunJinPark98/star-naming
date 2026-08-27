@@ -1435,8 +1435,8 @@
    * 그림을 바로 얹지 못한다. 대신 같은 그림을 그려 주는 /api/card 에
    * 이름과 뜻을 실어 보낸다. (api/card.js)
    */
-  /* /api/card 가 있는 곳(Vercel)에서만 결과 그림을 쓴다.
-     GitHub Pages 처럼 없는 곳에서는 붙박이 그림으로 돌아간다. */
+  /* /api/card 가 살아 있을 때만 결과 그림을 쓴다. 그 자리가 없거나 탈이 나면
+     (정적 서버로 띄워 볼 때, 함수가 죽었을 때) 붙박이 대문 그림으로 돌아간다. */
   let cardApiReady = false;
   (function pingCardApi() {
     if (!window.fetch) return;
