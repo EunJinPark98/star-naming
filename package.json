@@ -1,0 +1,12 @@
+{
+  "name": "star-naming",
+  "version": "1.0.0",
+  "private": true,
+  "description": "별별 작명소 — 엄마 아빠 이름으로 짓는 아기 이름",
+  "dependencies": {
+    "@napi-rs/canvas": "^1.0.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1428,6 +1428,50 @@
     return lines.join("\n") || "엄마 아빠 이름으로 지은 아이 이름";
   }
 
+  /**
+   * 카카오 카드에 얹을 그림 주소.
+   *
+   * 카카오는 자기 서버가 가져갈 수 있는 주소만 받으므로, 브라우저에서 만든
+   * 그림을 바로 얹지 못한다. 대신 같은 그림을 그려 주는 /api/card 에
+   * 이름과 뜻을 실어 보낸다. (api/card.js)
+   */
+  /* /api/card 가 있는 곳(Vercel)에서만 결과 그림을 쓴다.
+     GitHub Pages 처럼 없는 곳에서는 붙박이 그림으로 돌아간다. */
+  let cardApiReady = false;
+  (function pingCardApi() {
+    if (!window.fetch) return;
+    fetch("/api/card?ping=1", { method: "GET" })
+      .then((res) => {
+        cardApiReady = res.ok;
+      })
+      .catch(() => {
+        cardApiReady = false;
+      });
+  })();
+
+  function cardImageUrl() {
+    if (!current || !cardApiReady) return "";
+    const r = current.result;
+    const q = new URLSearchParams();
+    q.set("n", r.full);
+
+    if (current.opts.script === "hangul") {
+      q.set("p", "1");
+    } else {
+      const hanja = r.slots.map((s) => s.hanja && s.hanja.c).filter(Boolean).join("");
+      if (hanja) q.set("h", hanja);
+      const readings = r.slots
+        .filter((s) => s.hanja && s.hanja.c && s.hanja.m && s.hanja.m !== "뜻 모름")
+        .map((s) => s.hanja.m + " " + s.syl + " " + s.hanja.c);
+      if (readings.length) q.set("r", readings.join(","));
+    }
+
+    const meaning = meaningPlain();
+    if (meaning) q.set("m", meaning);
+
+    return location.origin + "/api/card?" + q.toString();
+  }
+
   if (KAKAO_JS_KEY) {
     const s = document.createElement("script");
     s.src = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js";
@@ -1448,6 +1492,7 @@
   $("shareBtn").addEventListener("click", async () => {
     const text = shareText();
     const url = location.href.split("#")[0];
+    const card = cardImageUrl();
 
     if (KAKAO_JS_KEY && window.Kakao && window.Kakao.isInitialized && window.Kakao.isInitialized()) {
       try {
@@ -1456,9 +1501,10 @@
           content: {
             title: "별별 작명소 ✦ " + current.result.full,
             description: shareDescription(),
-            imageUrl: new URL("assets/og-image-v3.png", location.href).href,
-            imageWidth: 1200,
-            imageHeight: 630,
+            /* 결과 그림을 못 만들면 붙박이 대문 그림으로 돌아간다. 크기도 그에 맞춘다. */
+            imageUrl: card || new URL("assets/og-image-v3.png", location.href).href,
+            imageWidth: card ? 1080 : 1200,
+            imageHeight: card ? 1080 : 630,
             link: { mobileWebUrl: url, webUrl: url },
           },
           buttons: [
