@@ -281,6 +281,52 @@
     return word.slice(0, -1) + String.fromCharCode(0xac00 + code - jong + JONG.indexOf(to));
   }
 
+  /** 받침 없는 끝 글자에 받침을 붙인다. 고 → 곱 처럼. */
+  function addJong(word, jong) {
+    const ch = word[word.length - 1];
+    if (!ch || !isHangulSyllable(ch)) return null;
+    const code = ch.charCodeAt(0) - 0xac00;
+    if (code % 28 !== 0) return null;
+    const i = JONG.indexOf(jong);
+    if (i < 0) return null;
+    return word.slice(0, -1) + String.fromCharCode(0xac00 + code + i);
+  }
+
+  /**
+   * 훈음 표의 새김은 "깊을 · 사랑할" 처럼 ㄹ로 끝난다.
+   * 그대로 이어 붙이면 "사랑할 옥" · "사랑함과 깊음이 담긴 아이" 처럼
+   * 어색해지므로, 꾸미는 꼴(a)과 잇는 꼴(j)을 만들어 둔다.
+   *
+   *   깊을    → 깊은     · 깊고
+   *   사랑할  → 사랑이 가득한 · 사랑이
+   *   고울    → 고운     · 곱고     (ㅂ이 빠진 말은 되돌린다)
+   *   클      → 큰       · 크고
+   */
+  function inflectHun(hun) {
+    if (!hun || jongOf(hun) !== "ㄹ") return null;
+    const last = hun[hun.length - 1];
+
+    /* "사랑할"처럼 -하다에서 온 말은 이름씨를 되찾는 쪽이 훨씬 낫다.
+       "사랑하고 깊은" 보다 "사랑이 깊은" 이 우리 말에 가깝다. */
+    if (last === "할" && hun.length >= 2) {
+      const noun = hun.slice(0, -1);
+      const josa = jongOf(noun) ? "이" : "가";
+      return { a: noun + josa + " 가득한", j: noun + josa };
+    }
+
+    const a = swapJong(hun, "ㄹ", "ㄴ");
+    if (!a) return null;
+
+    let stem;
+    if (last === "을") stem = hun.slice(0, -1);
+    else if (last === "울" && hun.length >= 2) {
+      /* 고울 ← 곱다, 아름다울 ← 아름답다. 이을 때 ㅂ을 되돌린다. */
+      stem = addJong(hun.slice(0, -1), "ㅂ") || hun.slice(0, -1);
+    } else stem = swapJong(hun, "ㄹ", "") || hun;
+
+    return { a, j: stem + "고" };
+  }
+
   /** 흔히 다르게 부르는 훈 */
   const HUN_ALIAS = { 한: "하나", 두: "둘", 석: "셋", 온: "온전할" };
 
@@ -333,16 +379,13 @@
     /* 한 글자거나 "밝을"처럼 이미 꾸며 주는 꼴이면 그대로 쓰고,
        "은혜"처럼 이름씨면 "의"를 붙여야 말이 된다. */
     const adnominal = m.length === 1 || jongOf(m) === "ㄹ";
-    /* "사랑할"처럼 움직씨를 꾸미는 꼴로 적어 주시면 그대로 잇기가 어렵다.
-       "사랑할 옥" · "사랑할 고운 아이"가 되어 버린다. "사랑함"으로 바꾸어
-       "사랑함이 담긴 옥" · "사랑함과 고운 아이"로 두른다. */
-    const verbal = m.length > 1 && jongOf(m) === "ㄹ";
-    const noun = (verbal && swapJong(m, "ㄹ", "ㅁ")) || m;
+    /* 훈음 표의 새김은 ㄹ로 끝난다. 우리 말에 맞는 꼴로 두른다. */
+    const bent = inflectHun(m);
     return {
       c: ch || "",
       m,
-      a: verbal ? noun + "이 담긴" : adnominal ? m : m + "의",
-      j: noun + (jongOf(noun) ? "과" : "와"),
+      a: bent ? bent.a : adnominal ? m : m + "의",
+      j: bent ? bent.j : m + (jongOf(m) ? "과" : "와"),
       t: null,
       custom: true,
       short: adnominal,
