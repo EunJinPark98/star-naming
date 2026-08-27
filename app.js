@@ -629,6 +629,8 @@
         syncCustom();
         sel.addEventListener("change", syncCustom);
         custom.addEventListener("input", syncNote);
+        /* 한글 이름 여부·고른 한자가 바뀌면 물려줄 글자도 달라진다 */
+        sel.addEventListener("change", syncChosungOptions);
 
         row.append(sel, custom, note, finds);
         line.append(row);
@@ -726,6 +728,8 @@
     renderHanjaPick();
     syncSurnamePick();
     syncSimil();
+    /* 물려받을 글자가 달라지면 순우리말에서 고를 수 있는 초성도 달라진다 */
+    syncChosungOptions();
   }
 
   /**
@@ -801,7 +805,11 @@
   document.querySelectorAll('input[name="len"]').forEach((el) =>
     el.addEventListener("change", syncSimil)
   );
-  $("simil").addEventListener("input", syncSimil);
+  $("simil").addEventListener("input", () => {
+    syncSimil();
+    /* 닮음이 달라지면 순우리말에서 고를 수 있는 초성도 달라진다 */
+    syncChosungOptions();
+  });
   /* 첫 화면은 이름이 비어 있으니 성 고르기와 닮음도 그에 맞춰 둔다 */
   syncSurnamePick();
   syncSimil();
@@ -839,13 +847,26 @@
    */
   function chosungAvailable(c, i, picked, len, script, gender) {
     if (script !== "hangul") return POOL_HANJA.some((s) => chosungOf(s) === c);
+
+    /* 순우리말은 닮음도 함께 지켜야 한다. 목록에서 통째로 골라 오므로
+       "부모님 글자를 품은 이름" 안에서 그 초성이 나와야 고를 수 있다. */
+    const parents = parentSyllables();
+    const want = pureWant({ simil: Number($("simil").value), len, parents });
+    const dad = new Set(parents.filter((p) => p.who === "아빠").map((p) => p.syl));
+    const mom = new Set(parents.filter((p) => p.who === "엄마").map((p) => p.syl));
+    const any = new Set([...dad, ...mom]);
+    const has = (name, set) => [...name].some((ch) => set.has(ch));
+
     return PURE_NAMES.some((x) => {
       if (x.n.length !== len) return false;
       if (gender !== "N" && x.g !== "N" && x.g !== gender) return false;
       if (chosungOf(x.n[i]) !== c) return false;
+      if (want >= 2 && dad.size && mom.size && !(has(x.n, dad) && has(x.n, mom))) return false;
+      if (want === 1 && any.size && !has(x.n, any)) return false;
       return picked.every((p, j) => j === i || !p || chosungOf(x.n[j]) === p);
     });
   }
+
 
   /** 지금 그려 둔 초성 선택 상자 (이름 자리 순서대로) */
   let chosungSelects = [];
@@ -1020,25 +1041,19 @@
    * 조건에 맞는 이름 하나를 찾는다.
    * 못 찾으면 조건을 하나씩 풀면서 다시 찾는다.
    */
+  /** 순우리말 이름이 물려받아야 할 글자 수.
+      이름을 적어 주신 분 수만큼만 물려받을 수 있다 —
+      아빠만 적으셨으면 100%라도 한 글자가 최대다. */
+  function pureWant(o) {
+    const whoCount = new Set(o.parents.map((p) => p.who)).size;
+    return Math.min(SIMIL_PLAN[o.simil].parent, o.len, whoCount);
+  }
+
   function buildName(o) {
     /* 한글 이름은 순우리말 목록에서만 고른다.
-       닮음을 지킬 수 없으면 한 단씩 풀어 내려간다. 몇 단을 풀었는지는
-       위에서 알려 드리려고 결과에 적어 둔다. */
-    if (o.script === "hangul") {
-      /* 이름을 적어 주신 분 수만큼만 물려받을 수 있다.
-         아빠만 적으셨으면 100%라도 한 글자가 최대다. */
-      const whoCount = new Set(o.parents.map((p) => p.who)).size;
-      const want = Math.min(SIMIL_PLAN[o.simil].parent, o.len, whoCount);
-      for (let w = want; w >= 0; w--) {
-        const found = pickPureName(o, w);
-        if (found) {
-          found.wantParent = want;
-          found.gotParent = w;
-          return found;
-        }
-      }
-      return null;
-    }
+       닮음을 지킬 수 없으면 몰래 풀지 않고 못 지었다고 돌려보낸다.
+       한자 이름도 물려받기는 풀지 않으므로 결이 같다. */
+    if (o.script === "hangul") return pickPureName(o, pureWant(o));
 
     /* 앞에서부터 차례로 시도한다. 뒤로 갈수록 조건을 하나씩 놓아 준다. */
     const steps = [
@@ -1356,8 +1371,6 @@
   let shownKey = "";
   /** 마지막으로 제출한 조건 */
   let lastOpts = null;
-  /** 닮음을 풀었다고 이미 말씀드린 사정 */
-  let relaxTold = "";
 
   function openModal(result, opts) {
     current = { result, opts };
@@ -1526,6 +1539,45 @@
     };
   }
 
+  /**
+   * 이름을 못 지었을 때 무엇이 걸렸는지 짚어 준다.
+   *
+   * 순우리말은 손질해 담아 둔 목록에서 통째로 고르므로, 닮음을 지킬 이름이
+   * 아예 없을 수 있다. 그럴 때 무엇을 낮추면 되는지 알려 드려야 한다.
+   */
+  function whyNone(opts) {
+    const plain = "이 조건에 맞는 이름을 찾지 못했어요. 조건을 조금 풀어 주세요.";
+    if (opts.script !== "hangul") return plain;
+
+    const fresh = Object.assign({}, opts, { exclude: new Set() });
+    const LEN = { 1: "외자", 2: "두 글자", 3: "세 글자" };
+    const canDo = (n) =>
+      !!pickPureName(
+        Object.assign({}, fresh, { len: n }),
+        pureWant(Object.assign({}, opts, { len: n }))
+      );
+
+    /* 자수만 바꾸면 나오는가 — 이 쪽이 가장 손쉬운 길이라 먼저 권한다 */
+    const other = [1, 2, 3].filter((n) => n !== opts.len && canDo(n));
+    if (other.length) {
+      return (
+        "닮음 " + opts.simil + "%로는 " + LEN[opts.len] + " 순우리말 이름이 없어요. " +
+        other.map((n) => LEN[n]).join("나 ") + "로 두시면 나와요."
+      );
+    }
+
+    /* 닮음을 낮추면 나오는가 */
+    for (let w = pureWant(opts) - 1; w >= 0; w--) {
+      if (!pickPureName(fresh, w)) continue;
+      return (
+        "닮음 " + opts.simil + "%로 지을 수 있는 순우리말 이름이 없어요. " +
+        (w > 0 ? "두 분 글자를 다 품은 이름이 없거든요." : "부모님 이름 글자를 품은 이름이 없거든요.") +
+        " 닮음을 낮춰 주세요."
+      );
+    }
+    return plain;
+  }
+
   function run(opts, isAgain) {
     showLoading();
     const wait = reduceMotion ? 200 : 1900 + Math.random() * 500;
@@ -1542,7 +1594,7 @@
           shown.size > 0 && !!buildName(Object.assign({}, opts, { exclude: new Set() }));
 
         if (!exhausted) {
-          showError("이 조건에 맞는 이름을 찾지 못했어요. 조건을 조금 풀어 주세요.");
+          showError(whyNone(opts));
           return;
         }
 
@@ -1555,7 +1607,7 @@
           opts.exclude = shown;
           const again = buildName(opts);
           if (!again) {
-            showError("이 조건에 맞는 이름을 찾지 못했어요. 조건을 조금 풀어 주세요.");
+            showError(whyNone(opts));
             return;
           }
           shown.add(again.full);
@@ -1568,38 +1620,6 @@
         /* 더 지어 드릴 이름이 없다. 이름 없이 안내만 단독으로 보여 준다. */
         showExhausted("지어 드릴 수 있는 이름을 모두 보여 드렸어요.");
         return;
-      }
-
-      /* 닮음을 지키지 못했으면 조용히 넘기지 않는다.
-         앞서 다 보여 드려서 남지 않은 것이라면, 한자 이름과 똑같이
-         "모두 보여 드렸어요" 화면과 다시 보기를 드린다. 그런 이름이
-         애초에 없는 것이라면 그렇다고만 알려 드리고 지어 놓은 이름을
-         보여 드린다 — 다시 보기를 눌러 봐야 달라질 것이 없다. */
-      if (result.gotParent < result.wantParent) {
-        /* 기록을 지웠다면 어디까지 닮게 지을 수 있었는가 */
-        const fresh = Object.assign({}, opts, { exclude: new Set() });
-        let best = 0;
-        for (let w = result.wantParent; w > 0; w--) {
-          if (pickPureName(fresh, w)) {
-            best = w;
-            break;
-          }
-        }
-        if (result.gotParent < best) {
-          showExhausted("부모님 이름 글자를 품은 순우리말 이름을 모두 보여 드렸어요.");
-          return;
-        }
-        /* 같은 말을 지을 때마다 되풀이하지 않는다. 사정이 달라지지 않는데
-           6초짜리 안내가 매번 뜨면 성가시다. */
-        const say = opts.key + "/" + opts.simil + "/" + result.wantParent + "/" + result.gotParent;
-        if (relaxTold !== say) {
-          relaxTold = say;
-          toast(
-            result.gotParent > 0
-              ? "두 분 글자를 다 품은 순우리말 이름이 없어, 한 글자만 물려받았어요."
-              : "부모님 이름 글자를 품은 순우리말 이름이 없어, 새로 지었어요."
-          );
-        }
       }
 
       shown.add(result.full);
