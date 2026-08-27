@@ -1664,6 +1664,19 @@
       });
   })();
 
+  /**
+   * 카드 그림의 판 번호.
+   *
+   * 같은 이름이면 같은 그림이라 주소마다 오래 담아 두게 해 두었다
+   * (Cache-Control: immutable). 그래서 그리는 쪽을 고치거나 글꼴을
+   * 바꾸어도, 한 번 담긴 주소는 옛 그림을 그대로 내놓는다. 카카오도
+   * 한 번 가져간 그림을 붙들고 있다.
+   *
+   * 카드 모양이나 글꼴을 손보았으면 이 번호를 올려 주세요.
+   * 주소가 달라지므로 새로 그린 그림이 나갑니다.
+   */
+  const CARD_V = "2";
+
   function cardImageUrl() {
     if (!current || !cardApiReady) return "";
     const r = current.result;
@@ -1683,6 +1696,7 @@
 
     const meaning = meaningPlain();
     if (meaning) q.set("m", meaning);
+    q.set("v", CARD_V);
 
     return location.origin + "/api/card?" + q.toString();
   }
