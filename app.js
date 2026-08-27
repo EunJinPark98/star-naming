@@ -264,6 +264,8 @@
         custom.className = "hrow__custom";
         custom.placeholder = "예) 一  ·  한 일  ·  하나";
         custom.maxLength = 12;
+        /* 딸린 이름표가 없는 칸이라, 읽어 주는 이름을 붙여 둔다 */
+        custom.setAttribute("aria-label", who + " 이름 '" + syl + "' 의 한자 직접 입력");
         if (prev[key] !== undefined) custom.value = prev[key].c;
 
         const note = document.createElement("p");

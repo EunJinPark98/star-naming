@@ -22,7 +22,6 @@ const H = 1080;
 /* 글꼴은 찬 곳에서 한 번만 읽는다 */
 const FONT_FILE = "byeol-card.woff2";
 let fontReady = false;
-let fontFrom = "";
 
 function fontCandidates() {
   return [
@@ -40,7 +39,8 @@ function loadFont() {
       if (fs.existsSync(file)) {
         GlobalFonts.register(fs.readFileSync(file), FONT);
         fontReady = true;
-        fontFrom = file;
+        /* 어느 자리에서 읽었는지는 배포 로그에만 남긴다 */
+        console.log("[card] 글꼴을 읽었습니다:", file);
         return true;
       }
     } catch (e) {
@@ -259,29 +259,6 @@ module.exports = (req, res) => {
       query = {};
     }
   }
-
-  /* 어디서 걸렸는지 눈으로 보려고 둔 자리. 비밀은 담지 않는다. */
-  if (query.debug) {
-    const found = loadFont();
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.status(200).end(
-      JSON.stringify(
-        {
-          ok: found,
-          node: process.version,
-          fontLoadedFrom: fontFrom || null,
-          triedPaths: fontCandidates().map((p) => ({ path: p, exists: fs.existsSync(p) })),
-          cwd: process.cwd(),
-          dirname: __dirname,
-          sawQuery: query,
-        },
-        null,
-        2
-      )
-    );
-    return;
-  }
-
 
   /* 이 자리가 살아 있는지만 묻는 것. 그림은 그리지 않는다.
      (정적 서버로 띄워 보는 경우처럼 여기가 없을 수 있어서, 쪽에서 먼저
