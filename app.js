@@ -106,14 +106,87 @@
     return idx;
   })();
 
-  /** 그 한자를 어떻게 읽는지. 樂(락·악)처럼 여럿일 수 있다. */
-  const HANJA_READINGS = (() => {
+  /** 우리 사전이 아는 읽기. 樂(락·악)처럼 여럿일 수 있다. */
+  const SYL_READINGS = (() => {
     const idx = {};
     for (const syl of Object.keys(SYL)) {
       for (const h of SYL[syl].h) (idx[h.c] = idx[h.c] || []).push(syl);
     }
     return idx;
   })();
+
+  /* ── 온 한자의 훈음 ──────────────────────────
+   *
+   * 사전(data.js)에는 아이 이름을 짓는 데 쓰는 글자만 담는다. 그런데
+   * 부모님 이름에는 그 밖의 글자가 얼마든지 온다 — 忯(믿을 지) · 㴗(깊을 유)
+   * 처럼. 그런 글자의 뜻까지 알아보려고 2만 7천 자짜리 표를 따로 둔다.
+   *
+   * 화면을 여는 데 짐이 되지 않게, 부모님 이름을 적으실 때 그제야 받아 온다.
+   * 받아 오지 못해도 한자는 그대로 쓴다. 뜻만 모를 뿐이다.
+   * (tools/build-hun-table.js 로 만든다)
+   */
+  const ASSET_V = (() => {
+    const tag = document.querySelector('script[src*="app.js"]');
+    const m = tag && tag.getAttribute("src").match(/[?&]v=([^&]+)/);
+    return m ? m[1] : "";
+  })();
+
+  let HUN = null;
+  let hunAsked = false;
+
+  function loadHun(onReady) {
+    if (HUN || hunAsked || !window.fetch) return;
+    hunAsked = true;
+    fetch("hanja-hun.json" + (ASSET_V ? "?v=" + ASSET_V : ""))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((t) => {
+        if (!t) return;
+        HUN = t;
+        if (onReady) onReady();
+      })
+      .catch(() => {
+        /* 못 받아도 하던 대로 굴러간다 */
+      });
+  }
+
+  /** 그 한자를 어떻게 읽는지. 우리 사전을 먼저 보고, 없으면 훈음 표를 본다. */
+  function readingsOf(ch) {
+    if (SYL_READINGS[ch]) return SYL_READINGS[ch].slice();
+    if (!HUN || !HUN[ch]) return [];
+    const out = [];
+    for (const r of HUN[ch].split(",")) {
+      const eum = r.slice(-1);
+      if (out.indexOf(eum) < 0) out.push(eum);
+    }
+    return out;
+  }
+
+  /** 훈음 표에서 이 글자의 훈을 찾는다. 그 자리의 소리로 읽는 것을 먼저 본다. */
+  function hunOf(ch, syl) {
+    if (!HUN || !HUN[ch]) return "";
+    const reads = HUN[ch].split(",");
+    const fit = reads.filter((r) => r.slice(-1) === syl);
+    const pick = (fit.length ? fit : reads)[0];
+    return pick.slice(0, -1).trim();
+  }
+
+  /** "깊을" 을 유 자리에 적으셨을 때 㴗 을 찾아 준다. 여럿이면 여럿 그대로. */
+  function charsByHun(hun, syl) {
+    if (!HUN || !hun) return [];
+    const wants = hunForms(hun).map((f) => f + " " + syl);
+    const out = [];
+    for (const ch in HUN) {
+      const reads = HUN[ch].split(",");
+      for (let i = 0; i < reads.length; i++) {
+        if (wants.indexOf(reads[i]) >= 0) {
+          out.push(ch);
+          break;
+        }
+      }
+      if (out.length >= 6) break;
+    }
+    return out;
+  }
 
   const JONG = ["", "ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
 
@@ -199,7 +272,9 @@
     if (hit) {
       const found = HANJA_INDEX[hit[0]];
       if (found) return found; // 사전에 있으면 뜻풀이까지 그대로 쓴다
-      return customHanja(stripReading(raw.replace(CJK, " "), syl), hit[0]);
+      /* 뜻을 함께 적어 주셨으면 그 뜻을 쓰고, 아니면 훈음 표에서 찾는다 */
+      const typed = stripReading(raw.replace(CJK, " "), syl);
+      return customHanja(typed || hunOf(hit[0], syl), hit[0]);
     }
 
     const hun = stripReading(raw, syl);
@@ -209,7 +284,14 @@
       const found = entry.h.find((h) => forms.some((f) => f === h.m || h.m.includes(f) || f.includes(h.m)));
       if (found) return found;
     }
-    return customHanja(hun, "");
+
+    /* 사전에 없는 뜻이라도 훈음 표에서 글자를 찾아 드린다.
+       "깊을"을 유 자리에 적으시면 㴗 이 나온다. */
+    const hits = charsByHun(hun, syl);
+    if (hits.length === 1) return customHanja(hun, hits[0]);
+    const out = customHanja(hun, "");
+    if (hits.length > 1) out.candidates = hits;
+    return out;
   }
 
   /** 이름을 성과 이름으로 나눈다. 두 글자 성도 알아본다. */
@@ -281,7 +363,12 @@
         const custom = document.createElement("input");
         custom.type = "text";
         custom.className = "hrow__custom";
-        custom.placeholder = "예) 一  ·  한 일  ·  하나";
+        /* 보기말에는 반드시 한자를 넣는다. 한글만 적어도 되는 것처럼
+           보여 놓고 "한자를 적어 주세요"라고 하면 앞뒤가 맞지 않는다.
+           그 자리의 소리로 읽는 글자를 보기로 들면 가장 알아보기 쉽다. */
+        const sampleC = entry ? entry.h[0].c : "恩";
+        const sampleH = (entry ? hunOf(sampleC, syl) : "") || (entry ? entry.h[0].m : "은혜");
+        custom.placeholder = "예) " + sampleC + "   또는   " + sampleH + " " + (entry ? syl : "은") + " " + sampleC;
         custom.maxLength = 12;
         /* 딸린 이름표가 없는 칸이라, 읽어 주는 이름을 붙여 둔다 */
         custom.setAttribute("aria-label", who + " 이름 '" + syl + "' 의 한자 직접 입력");
@@ -306,7 +393,7 @@
             /* 지 자리에 盛(성)을 적는 것처럼, 읽는 소리가 어긋나면 짚어 드린다.
                잘못 적으신 것일 수도 있고, 우리가 모르는 읽기일 수도 있어
                막지는 않는다. */
-            const reads = HANJA_READINGS[parsed.c] || [];
+            const reads = readingsOf(parsed.c);
             if (reads.length && reads.indexOf(syl) < 0) {
               note.textContent =
                 parsed.c + " " + eun(reads[0]) + " '" + reads.join("' · '") + "'" +
@@ -318,8 +405,22 @@
               note.className = "hrow__note is-ok";
             }
           } else if (parsed.c && parsed.m !== "뜻 모름") {
-            note.textContent = "✓ " + parsed.c + " · " + parsed.m + " " + syl + ro(syl) + " 씁니다";
-            note.className = "hrow__note is-ok";
+            const reads = readingsOf(parsed.c);
+            if (reads.length && reads.indexOf(syl) < 0) {
+              note.textContent =
+                parsed.c + " " + eun(reads[0]) + " '" + reads.join("' · '") + "'" +
+                ro(reads[reads.length - 1]) + " 읽어요. '" + syl +
+                "' 자리가 맞나요? 그대로 쓰셔도 됩니다.";
+              note.className = "hrow__note is-warn";
+            } else {
+              note.textContent = "✓ " + parsed.c + " · " + parsed.m + " " + syl + ro(syl) + " 씁니다";
+              note.className = "hrow__note is-ok";
+            }
+          } else if (parsed.candidates) {
+            note.textContent =
+              "'" + parsed.m + " " + syl + "'로 읽는 한자가 여럿이에요 — " +
+              parsed.candidates.join(" · ") + " … 이 중에서 골라 적어 주세요.";
+            note.className = "hrow__note is-warn";
           } else if (parsed.c) {
             /* 글자는 그대로 쓴다. 우리가 뜻을 모를 뿐이라는 것을 분명히 한다.
                보기로 그분의 한자를 다시 보여 주면 엉뚱한 뜻을 붙인 것처럼
@@ -354,6 +455,17 @@
     $("hanjaPickDad").hidden = !build("아빠", dad, $("hanjaRowsDad"), $("hanjaNativeDad"));
     $("hanjaPickMom").hidden = !build("엄마", mom, $("hanjaRowsMom"), $("hanjaNativeMom"));
     syncHanjaNative();
+
+    /* 고를 자리가 생겼으니 훈음 표를 받아 둔다. 다 받으면 적어 두신 값을
+       다시 읽어 드린다(고른 값은 prev 로 그대로 이어진다). */
+    if (dad || mom) {
+      loadHun(() => {
+        /* 적고 계신 중이면 건드리지 않는다. 다음에 다시 그릴 때 반영된다. */
+        const on = document.activeElement;
+        if (on && on.classList && on.classList.contains("hrow__custom")) return;
+        renderHanjaPick();
+      });
+    }
   }
 
   /** 한글 이름 체크박스를 켜면 그 부모의 한자 선택 칸을 접어 둔다 */
@@ -1038,6 +1150,19 @@
 
   /* ── 제출 ─────────────────────────────────── */
 
+  /** 직접 입력을 골라 두고 한자를 적지 않은 칸. 없으면 null. */
+  function badCustomRow() {
+    const nativeDad = $("hanjaNativeDad").checked;
+    const nativeMom = $("hanjaNativeMom").checked;
+    for (const r of hanjaRows) {
+      if (r.sel.value !== "custom") continue;
+      if (r.who === "아빠" ? nativeDad : nativeMom) continue;
+      const parsed = parseCustom(r.custom.value, r.syl);
+      if (!parsed || !parsed.c) return r;
+    }
+    return null;
+  }
+
   function readOptions() {
     const dadRaw = $("dadName").value.trim();
     const momRaw = $("momName").value.trim();
@@ -1055,6 +1180,20 @@
     const surname = surFrom ? surFrom.sur : (dad ? dad.sur : mom ? mom.sur : "");
 
     const script = document.querySelector('input[name="script"]:checked').value;
+
+    /* 직접 입력을 골라 두고 한자를 적지 않으셨으면 여기서 멈춘다.
+       아무 글자나 받아 두면 그 자리는 소리만 남은 채 이름이 지어져,
+       적어 주신 것이 쓰인 줄 아시게 된다. */
+    const blank = badCustomRow();
+    if (blank) {
+      blank.custom.focus();
+      return {
+        error:
+          "'" + blank.syl + "' 자리에 한자를 적어 주세요. " +
+          "한자가 없는 이름이면 아래 '한글 이름이에요'를 골라 주세요.",
+      };
+    }
+
     const parents = parentSyllables();
 
     /* 한자 이름은 뜻을 아는 글자라야 물려받을 수 있다 */

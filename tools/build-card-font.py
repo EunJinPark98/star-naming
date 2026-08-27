@@ -4,19 +4,30 @@
 한글은 사이트와 같은 Gowun Batang, 한자는 Noto Serif KR 에서 필요한 글자만
 뽑아 한 파일로 합친다. 둘 다 glyf 형식에 unitsPerEm 이 1000 이라 그대로 붙는다.
 """
-import glob, os, re, shutil, sys, tempfile
+import glob, json, os, re, shutil, sys, tempfile
 from fontTools.ttLib import TTFont
 from fontTools.subset import Subsetter, Options
 from fontTools.merge import Merger
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "byeol-card.ttf"
-DATA_JS = "/home/user/star-naming/data.js"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_JS = os.path.join(ROOT, "data.js")
+HUN_JSON = os.path.join(ROOT, "hanja-hun.json")
 GOWUN = "node_modules/@fontsource/gowun-batang/files/gowun-batang-korean-700-normal.woff2"
 NOTO = sorted(glob.glob("node_modules/@fontsource/noto-serif-kr/files/*700-normal.woff2"))
 
-# 앱 사전에 실제로 쓰인 한자만 담는다
+# 앱 사전에 쓰인 한자에, 부모님이 적어 주실 수 있는 한자까지 담는다.
+# 물려받은 글자도 카드에 오르는데, 그 글자는 사전 밖일 수 있다.
+# (없는 글자는 카드가 한자 줄을 접으니 두부는 안 나지만, 되도록 보여 드린다)
 hanja = {h for h in re.findall(r'c: "([^"]+)"', open(DATA_JS, encoding="utf-8").read()) if h.strip()}
 hanja = {ch for h in hanja for ch in h}
+dict_hanja = set(hanja)
+try:
+    hun = json.load(open(HUN_JSON, encoding="utf-8"))
+    hanja |= set(hun.keys())
+    print("훈음 표까지 합쳐 바라는 한자 %d자 (있는 만큼만 담긴다)" % len(hanja))
+except FileNotFoundError:
+    print("훈음 표가 없어 사전의 한자만 담는다")
 
 # 한글은 성·이름을 이용자가 직접 적으므로 음절 전체를 담는다
 hangul = {chr(c) for c in range(0xAC00, 0xD7A4)}
@@ -71,7 +82,11 @@ print("noto (한자): %d자 / 필요 %d자, 파일 %d개" % (len(taken), len(han
 
 missing = hanja - taken
 if missing:
-    print("!! 빠진 한자:", "".join(sorted(missing)))
+    show = "".join(sorted(missing)[:40])
+    print("Noto 에 없어 못 담은 한자 %d자 (앞 40자: %s)" % (len(missing), show))
+    dict_missing = missing & dict_hanja
+    if dict_missing:
+        print("!! 그중 사전(data.js)에 담긴 글자:", "".join(sorted(dict_missing)))
 
 merger = Merger()
 merged = merger.merge(parts)
