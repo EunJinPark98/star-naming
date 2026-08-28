@@ -1618,6 +1618,19 @@
         "꼭 넣을 글자를 바꾸거나 이름 표기를 한자나 " + other + "로 바꿔 보세요."
       );
     }
+    /* 이 자수로는 담아 둔 이름이 애초에 하나도 없을 수 있다.
+       그때는 닮음을 아무리 낮춰도 안 나오므로 닮음 탓으로 돌리면 안 된다.
+       (소리 이름에는 외자가 없다 — "닮음 0%로는" 하고 운을 떼면
+        0%보다 더 낮출 데가 없어 무엇을 만져야 할지 알 수 없게 된다) */
+    const anyAt = (n) => !!pickPureName(Object.assign({}, fresh, { len: n }), 0);
+    if (!anyAt(opts.len)) {
+      const roomy = [1, 2, 3].filter((n) => n !== opts.len && anyAt(n));
+      return (
+        LEN[opts.len] + " " + label + "이 없어요." +
+        (roomy.length ? " " + roomy.map((n) => LEN[n]).join("나 ") + "로 두시면 나와요." : "")
+      );
+    }
+
     const canDo = (n) =>
       !!pickPureName(
         Object.assign({}, fresh, { len: n }),
