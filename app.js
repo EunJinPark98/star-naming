@@ -861,19 +861,33 @@
   const info = (syl) => SYL[syl] || PURE[syl] || null;
 
   /**
+   * 한자를 쓰지 않는 표기들.
+   *
+   * 순우리말("한별")과 그 외 소리 이름("제니")은 둘 다 글자를 짜맞추지 않고
+   * 손질해 담아 둔 목록에서 이름을 통째로 골라 온다. 고르는 길이 같으니
+   * 목록만 갈아 끼우고 나머지는 함께 쓴다.
+   */
+  const NAME_LISTS = { hangul: PURE_NAMES, sound: SOUND_NAMES };
+  /** 화면에 적어 드릴 때 쓰는 이름 (안내문 · 결과 딱지 · 공유 글) */
+  const SCRIPT_LABEL = { hangul: "순우리말 이름", sound: "소리 이름" };
+  /** 목록에서 통째로 골라 오는 표기인가 (= 한자를 쓰지 않는가) */
+  const fromList = (script) => script !== "hanja";
+  const nameList = (script) => NAME_LISTS[script] || PURE_NAMES;
+
+  /**
    * 그 자리를 이 초성으로 두고도 지을 이름이 남는지 본다.
    *
    * 지을 수 없는 초성을 고르면 "이름이 없어요"로 끝나 버리니,
    * 아예 고르지 못하게 막아 둔다. picked 는 다른 자리에서 이미 고른 초성이라,
-   * 순우리말처럼 이름을 통째로 골라 오는 쪽은 짝이 맞는지까지 본다.
+   * 순우리말·그 외처럼 이름을 통째로 골라 오는 쪽은 짝이 맞는지까지 본다.
    *
    * 한자 이름은 자리·성별을 놓아 가며 다시 찾고 자리마다 글자를 따로
    * 고르므로, 그 소리를 적는 글자가 하나라도 있으면 지을 수 있다.
    */
   function chosungAvailable(c, i, picked, len, script, gender) {
-    if (script !== "hangul") return POOL_HANJA.some((s) => chosungOf(s) === c);
+    if (!fromList(script)) return POOL_HANJA.some((s) => chosungOf(s) === c);
 
-    /* 순우리말은 닮음도 함께 지켜야 한다. 목록에서 통째로 골라 오므로
+    /* 목록에서 고르는 쪽은 닮음도 함께 지켜야 한다. 이름을 통째로 가져오므로
        "부모님 글자를 품은 이름" 안에서 그 초성이 나와야 고를 수 있다. */
     const parents = parentSyllables();
     const want = pureWant({ simil: Number($("simil").value), len, parents });
@@ -882,7 +896,7 @@
     const any = new Set([...dad, ...mom]);
     const has = (name, set) => [...name].some((ch) => set.has(ch));
 
-    return PURE_NAMES.some((x) => {
+    return nameList(script).some((x) => {
       if (x.n.length !== len) return false;
       if (gender !== "N" && x.g !== "N" && x.g !== gender) return false;
       if (chosungOf(x.n[i]) !== c) return false;
@@ -973,10 +987,10 @@
   /* ── 이름 짓기 ────────────────────────────── */
 
   /**
-   * 순우리말 이름 고르기.
+   * 목록에서 이름 고르기 — 순우리말과 그 외(소리 이름).
    *
    * 한자에서 온 소리를 섞지 않으려면 글자를 짜맞출 수 없다.
-   * 이미 있는 순우리말 이름 가운데서 조건에 맞는 것을 고른다.
+   * 이미 손질해 담아 둔 이름 가운데서 조건에 맞는 것을 고른다.
    */
   function pickPureName(o, wantParent) {
     const from = (who) => new Set(o.parents.filter((p) => p.who === who).map((p) => p.syl));
@@ -985,13 +999,13 @@
     const anySyl = new Set([...dadSyls, ...momSyls]);
     const has = (name, set) => [...name].some((c) => set.has(c));
 
-    let list = PURE_NAMES.filter((x) => {
+    let list = nameList(o.script).filter((x) => {
       if (x.n.length !== o.len) return false;
       if (o.gender !== "N" && x.g !== "N" && x.g !== o.gender) return false;
       if (o.mustChar && !x.n.includes(o.mustChar)) return false;
       if (!chosungMatchAll(x.n, o.chosung)) return false;
       /* BLOCKED 는 글자를 짜맞추다 나온 뜻밖의 말을 거르려는 것이라,
-         통째로 손질해 담아 둔 순우리말 이름에는 대지 않는다.
+         통째로 손질해 담아 둔 이름에는 대지 않는다.
          (은하수의 "하수"처럼 멀쩡한 이름이 애먼 데서 걸린다) */
       if (o.exclude.has(o.surname + x.n)) return false;
       return true;
@@ -1066,7 +1080,7 @@
    * 조건에 맞는 이름 하나를 찾는다.
    * 못 찾으면 조건을 하나씩 풀면서 다시 찾는다.
    */
-  /** 순우리말 이름이 물려받아야 할 글자 수.
+  /** 목록에서 고르는 이름이 물려받아야 할 글자 수.
       이름을 적어 주신 분 수만큼만 물려받을 수 있다 —
       아빠만 적으셨으면 100%라도 한 글자가 최대다. */
   function pureWant(o) {
@@ -1075,10 +1089,10 @@
   }
 
   function buildName(o) {
-    /* 한글 이름은 순우리말 목록에서만 고른다.
+    /* 한자를 쓰지 않는 표기(순우리말 · 그 외)는 담아 둔 목록에서만 고른다.
        닮음을 지킬 수 없으면 몰래 풀지 않고 못 지었다고 돌려보낸다.
        한자 이름도 물려받기는 풀지 않으므로 결이 같다. */
-    if (o.script === "hangul") return pickPureName(o, pureWant(o));
+    if (fromList(o.script)) return pickPureName(o, pureWant(o));
 
     /* 앞에서부터 차례로 시도한다. 뒤로 갈수록 조건을 하나씩 놓아 준다. */
     const steps = [
@@ -1284,8 +1298,8 @@
       .map((s) => {
         /* 뜻과 소리가 같으면("빛 빛") 한 번만 적는다 */
         const known = s.hanja && s.hanja.m && s.hanja.m !== "뜻 모름" && s.hanja.m !== s.syl;
-        /* 한글 이름을 골랐으면 한자는 보여 주지 않는다 */
-        const ch = script === "hanja" && s.hanja && s.hanja.c ? ' <i>' + s.hanja.c + "</i>" : "";
+        /* 한자를 쓰지 않는 표기를 골랐으면 한자는 보여 주지 않는다 */
+        const ch = !fromList(script) && s.hanja && s.hanja.c ? ' <i>' + s.hanja.c + "</i>" : "";
         return '<span class="ch">' + (known ? s.hanja.m + " " : "") + s.syl + ch + "</span>";
       })
       .join("");
@@ -1407,9 +1421,10 @@
     const charsEl = $("modalChars");
     const meaningEl = $("modalMeaning");
 
-    if (opts.script === "hangul") {
-      /* 순우리말 이름은 한자가 없다. 뜻은 목록에 담아 둔 그대로 보여 준다.
+    if (fromList(opts.script)) {
+      /* 순우리말·그 외 이름은 한자가 없다. 뜻은 목록에 담아 둔 그대로 보여 준다.
          한자 자리가 비니, 물려받은 글자가 있으면 그 자리에 적어 드린다. */
+      $("modalTag").textContent = SCRIPT_LABEL[opts.script];
       $("modalTag").hidden = false;
       hanjaEl.textContent = "";
       charsEl.textContent = "";
@@ -1511,7 +1526,7 @@
        한자를 고르셨으면 그 한자를 그대로 쓰고, 한글 이름이라 한자가 없으면
        그 소리를 적는 한자를 사전에서 찾아 넣는다. 김한별 · 이은결 두 분이
        모두 한글 이름이어도 김한결 같은 한자 이름을 지어 드릴 수 있다. */
-    const usable = script === "hanja" ? parents.filter(canLendHanja) : parents;
+    const usable = fromList(script) ? parents : parents.filter(canLendHanja);
 
     const mustMode = document.querySelector('input[name="must"]:checked').value;
     let mustChar = "";
@@ -1520,9 +1535,9 @@
       mustChar = $("mustCharInput").value.trim();
       if (!mustChar) return { error: "꼭 넣을 글자를 한 글자 적어 주세요." };
       if (!isHangulSyllable(mustChar)) return { error: "꼭 넣을 글자는 한글 한 글자여야 해요." };
-      /* 한글 이름은 소리만 있으면 되니 어떤 글자든 넣어 드린다.
+      /* 한자를 쓰지 않는 표기는 소리만 있으면 되니 어떤 글자든 넣어 드린다.
          한자 이름은 그 글자의 한자를 알아야 한다. */
-      if (script === "hanja" && !SYL[mustChar]) {
+      if (!fromList(script) && !SYL[mustChar]) {
         /* "별"처럼 한자의 뜻(훈)일 뿐 소리(음)가 아닌 글자가 많다.
            별을 한자로 적으면 星이고, 읽는 소리는 "성"이다. */
         const pure = PURE[mustChar];
@@ -1530,8 +1545,17 @@
           ? '"' + mustChar + '"은(는) 한자의 뜻이에요. 한자로는 ' + pure.why +
             "처럼 쓰고 소리는 다르게 읽습니다. "
           : '"' + mustChar + '" 소리로 읽는 한자가 사전에 없어요. ';
+        /* 아무 데로나 옮기시라 하면 그쪽에도 그 글자가 없어 또 막힌다.
+           이 글자가 실제로 든 표기만 짚어 드린다. */
+        const where = ["hangul", "sound"].filter((s) =>
+          nameList(s).some((x) => x.n.includes(mustChar))
+        );
         return {
-          error: why + '이름 표기를 "순우리말 이름"으로 바꾸면 그대로 넣어 드릴게요.',
+          error: where.length
+            ? why + "이름 표기를 " +
+              where.map((s) => (s === "hangul" ? "순우리말" : "그 외")).join("이나 ") +
+              "로 바꾸면 그대로 넣어 드릴게요."
+            : why + '"' + mustChar + '"이(가) 든 이름은 아직 담아 두지 못했어요.',
         };
       }
     }
@@ -1540,10 +1564,9 @@
 
     if (simil > 0 && !usable.length) {
       return {
-        error:
-          script === "hanja"
-            ? "두 분 이름의 글자를 한자로 옮길 수가 없어요. 이름 표기를 순우리말로 바꾸거나 닮음을 0%로 해 주세요."
-            : "두 분 이름을 다시 확인해 주세요.",
+        error: fromList(script)
+          ? "두 분 이름을 다시 확인해 주세요."
+          : "두 분 이름의 글자를 한자로 옮길 수가 없어요. 이름 표기를 순우리말이나 그 외로 바꾸거나 닮음을 0%로 해 주세요.",
       };
     }
     const len = Number(document.querySelector('input[name="len"]:checked').value);
@@ -1574,15 +1597,27 @@
   /**
    * 이름을 못 지었을 때 무엇이 걸렸는지 짚어 준다.
    *
-   * 순우리말은 손질해 담아 둔 목록에서 통째로 고르므로, 닮음을 지킬 이름이
-   * 아예 없을 수 있다. 그럴 때 무엇을 낮추면 되는지 알려 드려야 한다.
+   * 순우리말과 그 외는 손질해 담아 둔 목록에서 통째로 고르므로, 닮음을 지킬
+   * 이름이 아예 없을 수 있다. 그럴 때 무엇을 낮추면 되는지 알려 드려야 한다.
    */
   function whyNone(opts) {
     const plain = "이 조건에 맞는 이름을 찾지 못했어요. 조건을 조금 풀어 주세요.";
-    if (opts.script !== "hangul") return plain;
+    if (!fromList(opts.script)) return plain;
 
+    const label = SCRIPT_LABEL[opts.script];
     const fresh = Object.assign({}, opts, { exclude: new Set() });
     const LEN = { 1: "외자", 2: "두 글자", 3: "세 글자" };
+
+    /* 꼭 넣을 글자가 아예 없는 목록이면, 자수나 닮음을 아무리 손봐도 안 나온다.
+       그것부터 짚어 드려야 엉뚱한 데를 만지지 않으신다. */
+    if (opts.mustChar && !nameList(opts.script).some((x) => x.n.includes(opts.mustChar))) {
+      const josa = jongOf(opts.mustChar) ? "이" : "가";
+      const other = opts.script === "hangul" ? "그 외" : "순우리말";
+      return (
+        '"' + opts.mustChar + '"' + josa + " 든 " + label + "이 없어요. " +
+        "꼭 넣을 글자를 바꾸거나 이름 표기를 한자나 " + other + "로 바꿔 보세요."
+      );
+    }
     const canDo = (n) =>
       !!pickPureName(
         Object.assign({}, fresh, { len: n }),
@@ -1593,7 +1628,7 @@
     const other = [1, 2, 3].filter((n) => n !== opts.len && canDo(n));
     if (other.length) {
       return (
-        "닮음 " + opts.simil + "%로는 " + LEN[opts.len] + " 순우리말 이름이 없어요. " +
+        "닮음 " + opts.simil + "%로는 " + LEN[opts.len] + " " + label + "이 없어요. " +
         other.map((n) => LEN[n]).join("나 ") + "로 두시면 나와요."
       );
     }
@@ -1602,7 +1637,7 @@
     for (let w = pureWant(opts) - 1; w >= 0; w--) {
       if (!pickPureName(fresh, w)) continue;
       return (
-        "닮음 " + opts.simil + "%로 지을 수 있는 순우리말 이름이 없어요. " +
+        "닮음 " + opts.simil + "%로 지을 수 있는 " + label + "이 없어요. " +
         (w > 0 ? "두 분 글자를 다 품은 이름이 없거든요." : "부모님 이름 글자를 품은 이름이 없거든요.") +
         " 닮음을 낮춰 주세요."
       );
@@ -1742,7 +1777,9 @@
   function shareDescription() {
     if (!current) return "";
     const lines = [readingPlain(), meaningPlain()].filter(Boolean);
-    if (current.opts.script === "hangul" && lines.length) lines.unshift("순우리말 이름");
+    if (fromList(current.opts.script) && lines.length) {
+      lines.unshift(SCRIPT_LABEL[current.opts.script]);
+    }
     return lines.join("\n") || "엄마 아빠 이름으로 지은 아이 이름";
   }
 
@@ -1778,7 +1815,7 @@
    * 카드 모양이나 글꼴을 손보았으면 이 번호를 올려 주세요.
    * 주소가 달라지므로 새로 그린 그림이 나갑니다.
    */
-  const CARD_V = "2";
+  const CARD_V = "3";
 
   function cardImageUrl() {
     if (!current || !cardApiReady) return "";
@@ -1786,8 +1823,9 @@
     const q = new URLSearchParams();
     q.set("n", r.full);
 
-    if (current.opts.script === "hangul") {
-      q.set("p", "1");
+    if (fromList(current.opts.script)) {
+      /* 카드 위 딱지 — 1은 "순우리말", 2는 "소리 이름" (api/card.js) */
+      q.set("p", current.opts.script === "sound" ? "2" : "1");
     } else {
       const hanja = r.slots.map((s) => s.hanja && s.hanja.c).filter(Boolean).join("");
       if (hanja) q.set("h", hanja);

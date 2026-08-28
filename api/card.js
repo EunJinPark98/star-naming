@@ -135,7 +135,8 @@ function readParams(query) {
     hanja: HANJA.test(hanja) ? hanja : "",
     meaning: MEANING.test(meaning) ? meaning : "",
     readings,
-    pure: query.p === "1",
+    /* 한자가 없는 이름에 얹는 딱지. app.js 가 1(순우리말) · 2(그 외)를 보낸다 */
+    badge: query.p === "1" ? "순우리말" : query.p === "2" ? "소리 이름" : "",
   };
 }
 
@@ -233,17 +234,17 @@ function drawCard(o) {
      한 글자만 빼면 이름이 잘못 적힌 것처럼 보이기 때문이다. */
   const hanjaOk = canDraw(o.hanja + o.readings.join(""));
   const rows = [];
-  if (o.pure) rows.push({ kind: "badge", h: 52 });
-  rows.push({ kind: "name", h: 132, gap: o.pure ? 44 : 0 });
+  if (o.badge) rows.push({ kind: "badge", h: 52 });
+  rows.push({ kind: "name", h: 132, gap: o.badge ? 44 : 0 });
   if (o.hanja && hanjaOk) rows.push({ kind: "hanja", text: o.hanja, h: 54, gap: 46 });
   if (o.readings.length && hanjaOk) {
     rows.push({ kind: "chars", text: o.readings.join("   ·   "), h: 32, gap: 38 });
   }
   if (o.meaning) {
-    /* 순우리말은 이름 아래에 한자 줄과 뜻풀이가 없어 허전하니 더 띄운다.
+    /* 한자가 없는 이름은 이름 아래에 한자 줄과 뜻풀이가 없어 허전하니 더 띄운다.
        140 은 그렇게 띄우면서도 뜻이 한자 카드와 같은 높이(769.5)에 오도록
        맞춘 값이다. 위 줄들의 높이를 바꾸면 이 값도 다시 맞춰야 한다. */
-    rows.push({ kind: "rule", h: 1, gap: o.pure ? 140 : 66 });
+    rows.push({ kind: "rule", h: 1, gap: o.badge ? 140 : 66 });
     ctx.font = "700 46px " + FONTS;
     wrapLines(ctx, o.meaning, W - 220).forEach((line, i) => {
       rows.push({ kind: "meaning", text: line, h: 46, gap: i === 0 ? 66 : 26 });
@@ -257,7 +258,7 @@ function drawCard(o) {
     y += row.gap || 0;
     if (row.kind === "badge") {
       ctx.font = "400 28px " + FONTS;
-      const pw = ctx.measureText("순우리말").width + 56;
+      const pw = ctx.measureText(o.badge).width + 56;
       const px = (W - pw) / 2;
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(px, y, pw, row.h, 26);
@@ -266,7 +267,7 @@ function drawCard(o) {
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.fillStyle = "#f5c542";
-      ctx.fillText("순우리말", W / 2, y + 11);
+      ctx.fillText(o.badge, W / 2, y + 11);
     } else if (row.kind === "name") {
       const grad = ctx.createLinearGradient(0, y, 0, y + row.h);
       grad.addColorStop(0, "#ffe9a8");
