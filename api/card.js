@@ -135,8 +135,10 @@ function readParams(query) {
     hanja: HANJA.test(hanja) ? hanja : "",
     meaning: MEANING.test(meaning) ? meaning : "",
     readings,
-    /* 한자가 없는 이름에 얹는 딱지. app.js 가 1(순우리말) · 2(소리 이름)를 보낸다 */
-    badge: query.p === "1" ? "순우리말" : query.p === "2" ? "소리 이름" : "",
+    /* 한자가 없는 이름에 얹는 딱지. app.js 가 p=1 로 보낸다.
+       2 는 갈래를 순우리말·소리 이름 둘로 두던 때 쓰던 값이라, 그때 나간
+       카드 주소가 아직 어딘가에 남아 있을 수 있어 같이 받아 준다. */
+    badge: query.p === "1" || query.p === "2" ? "한글 이름" : "",
   };
 }
 
