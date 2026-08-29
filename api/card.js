@@ -135,7 +135,7 @@ function readParams(query) {
     hanja: HANJA.test(hanja) ? hanja : "",
     meaning: MEANING.test(meaning) ? meaning : "",
     readings,
-    /* 한자가 없는 이름에 얹는 딱지. app.js 가 1(순우리말) · 2(그 외)를 보낸다 */
+    /* 한자가 없는 이름에 얹는 딱지. app.js 가 1(순우리말) · 2(소리 이름)를 보낸다 */
     badge: query.p === "1" ? "순우리말" : query.p === "2" ? "소리 이름" : "",
   };
 }
