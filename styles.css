@@ -611,10 +611,10 @@ input[type="range"]::-moz-range-thumb {
 .steps b { color: var(--gold-1); font-weight: 600; }
 
 /* 카드가 나란히 서든 위아래로 쌓이든 크기를 같게 둔다 */
-.samples { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 12px; }
+.samples { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 12px; }
 /* 한 줄로 세울 때는 칸마다 높이를 맞출 까닭이 없다.
    맞춰 두면 한자 칸에 기대어 나머지 칸 속이 휑하게 빈다. */
-@media (max-width: 620px) {
+@media (max-width: 460px) {
   .samples { grid-template-columns: 1fr; grid-auto-rows: auto; }
 }
 
