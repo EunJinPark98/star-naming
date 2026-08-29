@@ -627,8 +627,10 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   flex-direction: column;
 }
-/* 카드마다 담는 줄 수가 달라도 뜻 위의 선은 같은 자리에 오도록 */
-.sample__head { flex: 1 1 auto; }
+/* 머리를 늘여 뜻을 아래로 미루지 않는다. 뜻 줄 수가 카드마다 달라
+   (2줄인 카드도, 1줄인 카드도 있다) 늘이는 쪽으로 맞추면 뜻이 짧은 카드가
+   오히려 아래로 처진다. 머리 바로 밑에 붙이고, 남는 자리는 카드 밑에 둔다. */
+.sample__head { flex: 0 0 auto; }
 .sample__name {
   margin: 0;
   font-family: var(--font-brand);
