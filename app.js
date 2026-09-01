@@ -631,6 +631,8 @@
         custom.addEventListener("input", syncNote);
         /* 한글 이름 여부·고른 한자가 바뀌면 물려줄 글자도 달라진다 */
         sel.addEventListener("change", syncChosungOptions);
+        /* 고른 한자가 바뀌면 두 분 이름의 뜻 계열도 바뀐다 */
+        sel.addEventListener("change", syncSimil);
 
         row.append(sel, custom, note, finds);
         line.append(row);
@@ -673,6 +675,8 @@
       /* 한자 고르는 줄이 접히면 위가 허전해 여백을 줄인다 */
       $("hanjaPick" + who).classList.toggle("is-native", on);
     }
+    /* 한자를 접으면 그 분 이름의 뜻 계열도 사라진다. 닮음 안내가 달라진다. */
+    syncSimil();
   }
   $("hanjaNativeDad").addEventListener("change", syncHanjaNative);
   $("hanjaNativeMom").addEventListener("change", syncHanjaNative);
@@ -762,6 +766,30 @@
     });
   }
 
+  /** 이름 → 뜻 계열. 부모님이 한글 이름일 때 그 뜻을 찾는 데 쓴다. */
+  const TAG_BY_NAME = (() => {
+    const m = Object.create(null);
+    for (const x of HANGUL_NAMES) m[x.n] = x.t;
+    return m;
+  })();
+
+  /**
+   * 두 분 이름의 뜻 계열.
+   *
+   * 한자를 고르셨으면 그 한자에 달린 계열을 그대로 쓴다. 한글 이름이라
+   * 한자가 없으면, 그 이름이 우리 목록에 있을 때 거기 달아 둔 계열을 쓴다.
+   * (김한별 → "한별"의 계열) 목록에 없는 이름이면 뜻을 알 길이 없다.
+   *
+   * 이걸 두지 않으면 두 분 다 한글 이름일 때 뜻 계열이 텅 비어,
+   * 25% · 75%가 아무 일도 하지 않고 지나간다.
+   */
+  function parentTagsOf(parents, given) {
+    const tags = new Set();
+    for (const p of parents) if (p.hanja && p.hanja.t) tags.add(p.hanja.t);
+    for (const n of given || []) if (n && TAG_BY_NAME[n]) tags.add(TAG_BY_NAME[n]);
+    return [...tags];
+  }
+
   /**
    * 이 글자를 한자 이름에 물려줄 수 있는가.
    *
@@ -815,23 +843,23 @@
     },
     25: {
       parent: 0, tag: 1,
-      hanja: "글자는 새로 짓되, 두 분 이름 한자의 뜻 계열을 이어받습니다.",
-      hangul: "두 분 이름 글자가 든 이름을 먼저 보여 드립니다.",
+      hanja: "글자는 새로 짓되, 두 분 이름과 뜻이 같은 갈래로 맞춥니다.",
+      hangul: "글자는 안 물려받고, 두 분 이름과 뜻이 같은 갈래로 골라 드립니다.",
     },
     50: {
       parent: 1, tag: 0,
       hanja: "두 분 이름에서 한 글자를 그대로 물려받습니다.",
-      hangul: "두 분 이름 글자가 든 이름만 골라 드립니다.",
+      hangul: "두 분 이름 글자가 들어간 이름을 골라 드립니다.",
     },
     75: {
       parent: 1, tag: 1,
-      hanja: "한 글자를 그대로 물려받고, 다른 자리도 같은 뜻 계열로 맞춥니다.",
-      hangul: "한 글자는 꼭 물려받고, 두 분 글자가 다 든 이름을 먼저 보여 드립니다.",
+      hanja: "한 글자를 그대로 물려받고, 뜻도 같은 갈래로 맞춥니다.",
+      hangul: "두 분 이름 글자가 들어가고, 뜻도 같은 갈래인 이름을 골라 드립니다.",
     },
     100: {
       parent: 2, tag: 0,
       hanja: "아빠 이름에서 한 글자, 엄마 이름에서 한 글자를 물려받습니다.",
-      hangul: "아빠와 엄마 글자가 모두 든 이름만 골라 드립니다.",
+      hangul: "아빠와 엄마 글자가 모두 들어간 이름을 골라 드립니다.",
     },
   };
 
@@ -843,11 +871,11 @@
    *
    * 같은 눈금이라도 이름 표기와 형편에 따라 하는 일이 달라진다.
    * 한 분 이름만 적으셨으면 "아빠에게서 하나, 엄마에게서 하나"가 될 수 없고,
-   * 외자는 자리가 하나뿐이라 두 글자를 물려받을 수 없다.
+   * 외자는 자리가 하나뿐이라 두 글자를 물려받을 수 없다. 두 분 이름의 뜻을
+   * 알 수 없으면 뜻 계열을 맞추는 단(25 · 75)도 그 몫을 못 한다.
    */
-  function similDesc(v, len, script, whoCount) {
-    const plan = SIMIL_PLAN[v];
-    const hangul = fromList(script);
+  function similDesc(v, len, script, whoCount, hasTag) {
+    const key = fromList(script) ? "hangul" : "hanja";
     /* 두 글자를 물려받을 수 있는 형편인가 */
     const canTwo = whoCount >= 2 && len >= 2;
 
@@ -855,10 +883,13 @@
       if (len === 1) return "외자는 자리가 하나예요. 두 분 중 한 분의 글자를 그대로 가져옵니다.";
       return "아빠 · 엄마 이름을 모두 적어 주셔야 한 글자씩 가져올 수 있어요.";
     }
-    /* 75%의 "한 글자 더"는 두 분이 다 계실 때만 뜻이 있다 */
-    if (v === 75 && hangul && !canTwo) return SIMIL_PLAN[50].hangul;
+    /* 뜻을 모르면 25는 0과, 75는 50과 같아진다. 숨기지 말고 그렇다고 적는다. */
+    if ((v === 25 || v === 75) && !hasTag) {
+      return SIMIL_PLAN[v === 25 ? 0 : 50][key] +
+        " 두 분 이름의 뜻을 알 수 없어 뜻 계열은 맞추지 못해요.";
+    }
 
-    return plan[hangul ? "hangul" : "hanja"];
+    return SIMIL_PLAN[v][key];
   }
 
   function syncSimil() {
@@ -886,10 +917,16 @@
     const v = Number(slider.value);
     const len = Number(document.querySelector('input[name="len"]:checked').value);
     const script = document.querySelector('input[name="script"]:checked').value;
-    const whoCount =
-      (splitName($("dadName").value) ? 1 : 0) + (splitName($("momName").value) ? 1 : 0);
+    const dad = splitName($("dadName").value);
+    const mom = splitName($("momName").value);
+    const whoCount = (dad ? 1 : 0) + (mom ? 1 : 0);
+    /* 뜻 계열을 맞출 수 있는 형편인지 미리 본다 */
+    const hasTag = parentTagsOf(parentSyllables(), [
+      dad && dad.given,
+      mom && mom.given,
+    ]).length > 0;
     $("similPct").textContent = v + "%";
-    $("similDesc").textContent = similDesc(v, len, script, whoCount);
+    $("similDesc").textContent = similDesc(v, len, script, whoCount, hasTag);
   }
   document.querySelectorAll('input[name="len"]').forEach((el) =>
     el.addEventListener("change", syncSimil)
@@ -1046,15 +1083,16 @@
    * 한자에서 온 소리를 섞지 않으려면 글자를 짜맞출 수 없다.
    * 이미 손질해 담아 둔 이름 가운데서 조건에 맞는 것을 고른다.
    *
-   * wantParent 는 꼭 물려받아야 할 글자 수. soft 를 켜면 거기서 한 글자
-   * 더 닮은 이름을 먼저 내놓고, 그런 이름이 동나면 조용히 아래 단으로
-   * 내려간다. 한자 이름의 "뜻 계열 잇기"에 해당하는 몫이다 — 한글
-   * 이름에는 한자가 없어 뜻 계열을 볼 수 없으니 닮음의 결로 대신한다.
+   * wantParent 는 꼭 물려받아야 할 글자 수.
    *
-   * soft 는 고를 순서만 바꾼다. 지을 수 있나 없나는 바꾸지 않으므로,
+   * wantTag 를 켜면 두 분 이름과 뜻 계열이 같은 이름을 먼저 내놓는다.
+   * 한자 이름의 "뜻 계열 잇기"와 똑같은 일이다 — 이름마다 달아 둔 t 를
+   * 보고 맞춘다. 그런 이름이 동나면 조용히 걸림이 풀려 아래 단으로 내려간다.
+   *
+   * wantTag 는 고를 순서만 바꾼다. 지을 수 있나 없나는 바꾸지 않으므로,
    * 까닭을 짚어 주는 whyNone 에서는 켜지 않아도 된다.
    */
-  function pickPureName(o, wantParent, soft) {
+  function pickPureName(o, wantParent, wantTag) {
     const from = (who) => new Set(o.parents.filter((p) => p.who === who).map((p) => p.syl));
     const dadSyls = from("아빠");
     const momSyls = from("엄마");
@@ -1091,13 +1129,12 @@
     }
     if (!list.length) return null;
 
-    /* 2) 한 단 더 닮은 이름이 있으면 그쪽을 먼저 내놓는다.
+    /* 2) 두 분 이름과 뜻이 같은 갈래인 이름을 먼저 내놓는다.
           동나면 이 걸림이 저절로 풀려 아래 단으로 내려간다. */
-    if (soft) {
-      const whoCount = new Set(o.parents.map((p) => p.who)).size;
-      const more = Math.min(wantParent + 1, o.len, whoCount);
-      if (more > wantParent) {
-        const near = list.filter((x) => holds(x.n, more));
+    if (wantTag) {
+      const tags = o.parentTags || [];
+      if (tags.length) {
+        const near = list.filter((x) => tags.includes(x.t));
         if (near.length) list = near;
       }
     }
@@ -1168,8 +1205,7 @@
        닮음을 지킬 수 없으면 몰래 풀지 않고 못 지었다고 돌려보낸다.
        한자 이름도 물려받기는 풀지 않으므로 결이 같다. */
     if (fromList(o.script)) {
-      /* tag 는 한자 이름에서 뜻 계열을 잇는 몫. 한글 이름에는 뜻 계열이
-         없으니 한 글자 더 닮은 이름을 먼저 내놓는 것으로 대신한다. */
+      /* tag 는 두 갈래에서 같은 일을 한다 — 두 분 이름의 뜻 계열 잇기. */
       return pickPureName(o, pureWant(o), !!SIMIL_PLAN[o.simil].tag);
     }
 
@@ -1196,10 +1232,8 @@
     const wantTag = keep.tag ? plan.tag : 0;
     const pool = POOL_HANJA; // 여기는 한자 이름만 온다
 
-    /* 부모 한자의 뜻 계열 */
-    const parentTags = [
-      ...new Set(parents.filter((p) => p.hanja && p.hanja.t).map((p) => p.hanja.t)),
-    ];
+    /* 두 분 이름의 뜻 계열. 한글 이름을 적으신 분 것도 함께 들어 있다. */
+    const parentTags = o.parentTags || [];
 
     const results = [];
     /* 뜻이 겹치는 이름. 달리 낼 것이 없을 때만 쓴다. */
@@ -1600,6 +1634,12 @@
     }
 
     const parents = parentSyllables();
+    /* 한글 이름을 적으신 분은 한자가 없다. 그 이름이 목록에 있으면
+       거기 달아 둔 뜻 계열을 대신 쓴다. */
+    const parentTags = parentTagsOf(parents, [
+      dad && dad.given,
+      mom && mom.given,
+    ]);
 
     /* 한자 이름에 물려줄 수 있는 글자.
        한자를 고르셨으면 그 한자를 그대로 쓰고, 한글 이름이라 한자가 없으면
@@ -1665,6 +1705,7 @@
       mustChar,
       chosung,
       parents,
+      parentTags,
       exclude: shown,
     };
   }
