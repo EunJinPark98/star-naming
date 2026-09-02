@@ -838,30 +838,25 @@
   const SIMIL_PLAN = {
     0: {
       parent: 0, tag: 0,
-      hanja: "두 분 이름과 상관없이 새로 지어 드립니다.",
-      hangul: "두 분 이름과 상관없이 지어 드립니다.",
+      desc: "두 분 이름과 상관없이 새로 지어 드립니다.",
     },
     25: {
       parent: 0, tag: 1,
-      hanja: "글자는 안 물려받고, 두 분 이름과 뜻이 같은 갈래로 지어 드립니다.",
-      hangul: "두 분 글자는 안 들어가고, 뜻만 같은 갈래로 지어 드립니다.",
+      desc: "글자는 안 물려받고, 두 분 이름과 뜻이 같은 갈래로 지어 드립니다.",
     },
     /* "아빠나 엄마" 와 "아빠도 엄마도" 를 또렷이 갈라 적는다.
        50과 100을 헷갈리시는 자리가 바로 여기다. */
     50: {
       parent: 1, tag: 0,
-      hanja: "아빠나 엄마 이름에서 한 글자만 물려받습니다.",
-      hangul: "아빠나 엄마 글자 하나가 들어간 이름으로 지어 드립니다.",
+      desc: "아빠나 엄마 이름에서 한 글자만 물려받습니다.",
     },
     75: {
       parent: 1, tag: 1,
-      hanja: "한 글자만 물려받고, 뜻도 같은 갈래로 맞춥니다.",
-      hangul: "글자 하나가 들어가고, 뜻도 같은 갈래인 이름으로 지어 드립니다.",
+      desc: "한 글자만 물려받고, 뜻도 같은 갈래로 맞춥니다.",
     },
     100: {
       parent: 2, tag: 0,
-      hanja: "아빠 이름에서 한 글자, 엄마 이름에서 한 글자를 물려받습니다.",
-      hangul: "아빠 글자와 엄마 글자가 둘 다 들어간 이름으로 지어 드립니다.",
+      desc: "아빠 이름에서 한 글자, 엄마 이름에서 한 글자를 물려받습니다.",
     },
   };
 
@@ -871,13 +866,13 @@
   /**
    * 닮음 눈금 밑에 적어 드릴 말.
    *
-   * 같은 눈금이라도 이름 표기와 형편에 따라 하는 일이 달라진다.
+   * 한자 이름과 한글 이름은 하는 일이 완전히 같으므로(글자 물려받기 +
+   * 뜻 계열 맞추기) 같은 말을 쓴다. 다만 형편에 따라 다른 말로 바뀐다.
    * 한 분 이름만 적으셨으면 "아빠에게서 하나, 엄마에게서 하나"가 될 수 없고,
    * 외자는 자리가 하나뿐이라 두 글자를 물려받을 수 없다. 두 분 이름의 뜻을
    * 알 수 없으면 뜻 계열을 맞추는 단(25 · 75)도 그 몫을 못 한다.
    */
-  function similDesc(v, len, script, whoCount, hasTag) {
-    const key = fromList(script) ? "hangul" : "hanja";
+  function similDesc(v, len, whoCount, hasTag) {
     /* 두 글자를 물려받을 수 있는 형편인가 */
     const canTwo = whoCount >= 2 && len >= 2;
 
@@ -887,11 +882,11 @@
     }
     /* 뜻을 모르면 25는 0과, 75는 50과 같아진다. 숨기지 말고 그렇다고 적는다. */
     if ((v === 25 || v === 75) && !hasTag) {
-      return SIMIL_PLAN[v === 25 ? 0 : 50][key] +
+      return SIMIL_PLAN[v === 25 ? 0 : 50].desc +
         " 두 분 이름의 뜻을 알 수 없어 뜻 계열은 맞추지 못해요.";
     }
 
-    return SIMIL_PLAN[v][key];
+    return SIMIL_PLAN[v].desc;
   }
 
   function syncSimil() {
@@ -918,7 +913,6 @@
 
     const v = Number(slider.value);
     const len = Number(document.querySelector('input[name="len"]:checked').value);
-    const script = document.querySelector('input[name="script"]:checked').value;
     const dad = splitName($("dadName").value);
     const mom = splitName($("momName").value);
     const whoCount = (dad ? 1 : 0) + (mom ? 1 : 0);
@@ -928,7 +922,7 @@
       mom && mom.given,
     ]).length > 0;
     $("similPct").textContent = v + "%";
-    $("similDesc").textContent = similDesc(v, len, script, whoCount, hasTag);
+    $("similDesc").textContent = similDesc(v, len, whoCount, hasTag);
   }
   document.querySelectorAll('input[name="len"]').forEach((el) =>
     el.addEventListener("change", syncSimil)
