@@ -111,7 +111,9 @@ function canDraw(text) {
  */
 /* 한자 범위는 글자로 적으면 豈(U+F900)처럼 겉모습이 같은 다른 글자를 잘못
    집어 범위가 한글까지 삼킬 수 있어, 번호로 적는다 */
-const HANGUL = /^[가-힣]{1,8}$/;
+/* 성은 한 자 아니면 두 자(남궁·황보 …), 이름은 세 자까지라 다섯 자를 넘을 수
+   없다. 좁게 잡아 두면 장난으로 부른 주소가 그림을 그리기 전에 걸린다. */
+const HANGUL = /^[가-힣]{1,5}$/;
 const HANJA = /^[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]{1,8}$/;
 const MEANING = /^[가-힣0-9 ,.·()]{1,40}$/;
 const READING = /^[가-힣 ]{1,14}[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]$/;
@@ -307,6 +309,115 @@ function drawCard(o) {
   return c.toBuffer("image/png");
 }
 
+/* ── 문지기 ──────────────────────────────────────
+ *
+ * 이 자리는 부를 때마다 1080×1080 그림을 새로 그린다. 한 장에 90ms 남짓이라
+ * 주소만 바꿔 가며 몰아치면 그대로 함수 실행 시간이 되고, 그게 곧 요금이다.
+ * 그래서 세 겹으로 둔다.
+ *
+ *   1. 그린 그림 잠깐 쟁이기 — 같은 주소면 붓을 다시 들지 않는다. 카톡이 한
+ *      카드를 여러 번 가져가도 그리는 것은 한 번뿐이다. 쟁여 둔 것을 내주는
+ *      데는 품이 안 드니 아래 두 겹의 셈에도 넣지 않는다.
+ *   2. 부른 곳(IP)별 상한 — 한 곳에서 몰아치는 것을 막는다.
+ *   3. 인스턴스 전체 상한 — IP를 바꿔 가며 들어오는 것까지 눌러 두는 빗장.
+ *
+ * 셋 다 이 인스턴스 안에서만 셈한다. Vercel 이 인스턴스를 여럿 띄우면 셈도
+ * 갈리므로, 작정하고 흩어서 때리는 것까지 여기서 막지는 못한다. 그건 Vercel
+ * 쪽 방화벽이 할 일이고 이것은 그 안쪽 겹이다.
+ */
+
+const WINDOW = 60000;
+const CAP_IP = 60;        /* 사람이 손으로 공유하는 것은 잘해야 몇 번이다 */
+const CAP_IP_BOT = 300;   /* 카톡·페북이 한 IP 로 여럿을 몰아 가져가는 일이 있다 */
+const CAP_ALL = 400;      /* 한 인스턴스가 쉬지 않고 그려도 분당 688장이 한계다 */
+const CAP_TABLE = 4096;   /* IP 표가 한없이 불어나지 않게 */
+
+/* 미리보기를 만들러 오는 것들. 흉내 낼 수 있는 값이지만 흉내 내 봐야 상한이
+   조금 높아질 뿐이고, 전체 상한은 그대로라 새는 구멍이 되지 않는다. */
+const BOT = /kakao|facebookexternalhit|twitterbot|slackbot|discordbot|telegrambot|whatsapp|googlebot|bingbot|yeti|daumoa|crawler|spider|bot[/ ]/i;
+
+const hits = new Map();   /* IP → 그린 때(ms) 목록 */
+let allHits = [];         /* 인스턴스 전체가 그린 때 */
+
+/** 창 밖으로 나간 것을 떨군다 */
+function recent(list, now) {
+  let i = 0;
+  while (i < list.length && now - list[i] >= WINDOW) i++;
+  return i ? list.slice(i) : list;
+}
+
+function clientIp(req) {
+  const h = req.headers || {};
+  const fwd = h["x-forwarded-for"];
+  if (typeof fwd === "string" && fwd) return fwd.split(",")[0].trim();
+  return h["x-real-ip"] || (req.socket && req.socket.remoteAddress) || "?";
+}
+
+/** 지금 그려 줘도 되나 */
+function overQuota(req, now) {
+  allHits = recent(allHits, now);
+  if (allHits.length >= CAP_ALL) return true;
+
+  const ip = clientIp(req);
+  const list = recent(hits.get(ip) || [], now);
+  if (list.length) hits.set(ip, list);
+  else hits.delete(ip);
+
+  const ua = (req.headers && req.headers["user-agent"]) || "";
+  const cap = BOT.test(ua) ? CAP_IP_BOT : CAP_IP;
+  return list.length >= cap;
+}
+
+/** 한 장 그렸다고 셈에 적는다 */
+function tally(req, now) {
+  allHits.push(now);
+  const ip = clientIp(req);
+  const list = hits.get(ip);
+  if (list) list.push(now);
+  else hits.set(ip, [now]);
+
+  if (hits.size > CAP_TABLE) {
+    for (const [k, v] of hits) if (now - v[v.length - 1] >= WINDOW) hits.delete(k);
+    /* 그래도 넘치면 들어온 지 오래된 것부터 버린다 */
+    for (const k of hits.keys()) {
+      if (hits.size <= CAP_TABLE) break;
+      hits.delete(k);
+    }
+  }
+}
+
+/* ── 그린 그림 쟁여 두기 ────────────────────────
+   한 장이 100KB 남짓이라 스물넷이면 3MB 안쪽이다. */
+const MEMO_MAX = 24;
+const memo = new Map();
+
+const memoKey = (o) =>
+  [o.name, o.hanja, o.meaning, o.badge, o.readings.join(",")].join("|");
+
+function memoGet(key) {
+  const png = memo.get(key);
+  if (!png) return null;
+  /* 방금 쓴 것을 뒤로 옮겨 둔다. 앞에 있는 것부터 버리므로 */
+  memo.delete(key);
+  memo.set(key, png);
+  return png;
+}
+
+function memoPut(key, png) {
+  memo.set(key, png);
+  while (memo.size > MEMO_MAX) memo.delete(memo.keys().next().value);
+}
+
+function sendPng(res, png) {
+  res.setHeader("Content-Type", "image/png");
+  /* 같은 이름이면 같은 그림이라 오래 담아 두어도 된다. s-maxage 는 Vercel
+     앞단더러 쥐고 있으라는 뜻이라, 같은 주소를 다시 부르면 여기까지 오지도
+     않는다. 실은 이 한 줄이 제일 크게 아낀다. */
+  res.setHeader("Cache-Control", "public, max-age=31536000, s-maxage=31536000, immutable");
+  res.setHeader("Content-Length", png.length);
+  res.status(200).end(png);
+}
+
 module.exports = (req, res) => {
   /* req.query 는 Vercel 이 채워 주지만, 없으면 주소에서 직접 읽는다 */
   let query = req.query;
@@ -329,24 +440,43 @@ module.exports = (req, res) => {
     return;
   }
 
-  if (!loadFont()) {
-    res.status(500).json({ error: "font not available" });
-    return;
-  }
-
+  /* 값을 먼저 살핀다. 글꼴을 읽기 전에 걸러야 장난으로 부른 주소가 공짜로
+     튕겨 나간다. */
   const opts = readParams(query);
   if (!opts) {
     res.status(400).json({ error: "bad or missing name" });
     return;
   }
 
+  /* 아까 그려 둔 것이 있으면 그대로 내준다 — 붓을 들지 않았으니 셈도 안 한다 */
+  const key = memoKey(opts);
+  const kept = memoGet(key);
+  if (kept) {
+    sendPng(res, kept);
+    return;
+  }
+
+  const now = Date.now();
+  if (overQuota(req, now)) {
+    /* 이 대답은 잠깐 뒤면 달라지므로 어디에도 담아 두면 안 된다 */
+    res.setHeader("Retry-After", "60");
+    res.setHeader("Cache-Control", "no-store");
+    res.status(429).json({ error: "too many requests" });
+    return;
+  }
+
+  if (!loadFont()) {
+    res.status(500).json({ error: "font not available" });
+    return;
+  }
+
+  /* 그리다 엎어지는 주소를 되풀이해 부르는 것도 품이 드니, 그리기 전에 적는다 */
+  tally(req, now);
+
   try {
     const png = drawCard(opts);
-    /* 같은 이름이면 같은 그림이라 오래 담아 두어도 된다 */
-    res.setHeader("Content-Type", "image/png");
-    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-    res.setHeader("Content-Length", png.length);
-    res.status(200).end(png);
+    memoPut(key, png);
+    sendPng(res, png);
   } catch (e) {
     console.error("[card] 그리지 못했습니다:", e);
     res.status(500).json({ error: "render failed" });
