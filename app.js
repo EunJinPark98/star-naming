@@ -130,11 +130,10 @@
    * 받아 오지 못해도 한자는 그대로 쓴다. 뜻만 모를 뿐이다.
    * (tools/build-hun-table.js 로 만든다)
    */
-  const ASSET_V = (() => {
-    const tag = document.querySelector('script[src*="app.js"]');
-    const m = tag && tag.getAttribute("src").match(/[?&]v=([^&]+)/);
-    return m ? m[1] : "";
-  })();
+  /* 훈음 표에만 붙이는 표. 쪽을 고칠 때마다 올리면 안 된다 — 그러면 표가
+     그대로인데도 손님마다 252KB 를 다시 받는다. 이 파일을 새로 만들 때만
+     올린다. (tools/build-hun-table.js 를 돌린 날) */
+  const HUN_V = "20260827";
 
   let HUN = null;
   let hunAsked = false;
@@ -142,7 +141,7 @@
   function loadHun(onReady) {
     if (HUN || hunAsked || !window.fetch) return;
     hunAsked = true;
-    fetch("hanja-hun.json" + (ASSET_V ? "?v=" + ASSET_V : ""))
+    fetch("hanja-hun.json?v=" + HUN_V)
       .then((r) => (r.ok ? r.json() : null))
       .then((t) => {
         if (!t) return;
@@ -1996,9 +1995,9 @@
             title: "별별 작명소 ✦ " + current.result.full,
             description: shareDescription(),
             /* 결과 그림을 못 만들면 붙박이 대문 그림으로 돌아간다. 크기도 그에 맞춘다. */
-            imageUrl: card || new URL("assets/og-image-v3.png", location.href).href,
-            imageWidth: card ? 1080 : 1200,
-            imageHeight: card ? 1080 : 630,
+            imageUrl: card || new URL("assets/og-image-v4.jpg", location.href).href,
+            imageWidth: card ? 1080 : 2400,
+            imageHeight: card ? 1080 : 1260,
             link: { mobileWebUrl: url, webUrl: url },
           },
           buttons: [
