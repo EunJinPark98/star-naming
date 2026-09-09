@@ -4,8 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>별별 작명소 — 엄마 아빠 이름으로 짓는 아기 이름 · 무료 작명</title>
-<meta name="description" content="엄마 아빠 이름의 한자 뜻을 이어받아 아기 이름을 무료로 지어 드립니다. 남아 · 여아, 외자 · 두 글자 · 세 글자, 꼭 넣고 싶은 글자까지 고르면 한자 뜻풀이와 함께 이름을 추천해 드려요. 회원가입 없이 바로 이용하세요." />
-<meta name="keywords" content="작명, 무료 작명, 아기 이름, 아기 이름 짓기, 신생아 이름, 아들 이름, 딸 이름, 한자 이름, 이름 뜻, 이름 추천, 부모 이름으로 짓는 이름, 별마마파파" />
+<meta name="description" content="엄마 아빠 이름으로 아기 이름을 무료로 지어 드립니다. 한자 이름은 두 분 이름의 뜻을 이어받아 뜻풀이까지, 한글 이름은 곱게 손질한 목록에서 골라 드려요. 남아 · 여아, 외자 · 두 글자 · 세 글자, 꼭 넣고 싶은 글자까지 고르실 수 있어요. 회원가입 없이 바로 이용하세요." />
+<meta name="keywords" content="작명, 무료 작명, 아기 이름, 아기 이름 짓기, 신생아 이름, 아들 이름, 딸 이름, 한자 이름, 한글 이름, 순우리말 이름, 이름 뜻, 이름 추천, 부모 이름으로 짓는 이름, 별마마파파" />
 <meta name="author" content="별마마파파" />
 <meta name="robots" content="index, follow, max-image-preview:large" />
 <meta name="theme-color" content="#05060c" />
@@ -16,7 +16,7 @@
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="별별 작명소" />
 <meta property="og:title" content="별별 작명소 — 엄마 아빠 이름으로 짓는 아기 이름" />
-<meta property="og:description" content="엄마 아빠 이름의 한자 뜻을 이어받아 아기 이름을 무료로 지어 드립니다. 한자 뜻풀이까지 함께요." />
+<meta property="og:description" content="엄마 아빠 이름으로 아기 이름을 무료로 지어 드립니다. 한자 이름은 뜻풀이까지, 한글 이름도 함께요." />
 <meta property="og:image" content="https://naming.byeolmamapapa.com/assets/og-image-v4.jpg" />
 <meta property="og:image:type" content="image/jpeg" />
 <meta property="og:image:width" content="2400" />
@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" />
-<link rel="stylesheet" href="styles.css?v=20260908a" />
+<link rel="stylesheet" href="styles.css?v=20260909a" />
 
 <script type="application/ld+json">
 {
@@ -44,7 +44,7 @@
       "applicationCategory": "LifestyleApplication",
       "operatingSystem": "All",
       "inLanguage": "ko-KR",
-      "description": "엄마 아빠 이름의 한자 뜻을 이어받아 아기 이름을 지어 주는 무료 작명 서비스입니다.",
+      "description": "엄마 아빠 이름으로 아기 이름을 지어 주는 무료 작명 서비스입니다. 한자 이름과 한글 이름을 모두 지어 드립니다.",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
       "author": {
         "@type": "Organization",
@@ -92,6 +92,12 @@
 </script>
 </head>
 <body>
+<noscript>
+  <p class="noscript">
+    이 쪽은 자바스크립트로 이름을 짓습니다. 브라우저에서 자바스크립트를 켜 주시면
+    바로 쓰실 수 있어요.
+  </p>
+</noscript>
 <canvas id="sky" aria-hidden="true"></canvas>
 <div class="glow" aria-hidden="true"></div>
 
@@ -253,7 +259,7 @@
       </section>
     </details>
 
-    <p id="formError" class="form-error" hidden></p>
+    <p id="formError" class="form-error" role="alert" hidden></p>
 
     <button type="submit" class="btn btn--gold btn--big">
       <span>✦ 이름 지으러 가기</span>
@@ -367,7 +373,7 @@
 <!-- ── 짜잔 ─────────────────────────────────────── -->
 <div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modalName">
   <div class="modal__dim" data-close></div>
-  <div class="modal__box">
+  <div class="modal__box" tabindex="-1">
     <button type="button" class="modal__x" data-close aria-label="닫기">✕</button>
 
     <div id="modalResult">
@@ -417,7 +423,7 @@
 
 <div id="toast" class="toast" hidden></div>
 
-<script src="data.js?v=20260908a"></script>
-<script src="app.js?v=20260908a"></script>
+<script src="data.js?v=20260909a"></script>
+<script src="app.js?v=20260909a"></script>
 </body>
 </html>

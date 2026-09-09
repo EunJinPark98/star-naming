@@ -375,6 +375,26 @@ select option { background: #12131c; color: var(--text); }
   font-size: 0.88rem;
 }
 
+/* 손으로 쓰는 기기에서는 16px 로 키운다.
+   아이폰 사파리는 눌러서 글을 넣는 칸의 글씨가 16px 보다 작으면 화면을
+   저절로 확대해 버리고, 다 쓴 뒤에도 되돌려 주지 않는다. 여기까지 오신
+   분은 대개 카톡에서 넘어온 폰이라 이 자리가 특히 걸린다. */
+@media (pointer: coarse) {
+  .hrow select,
+  .hrow__custom { font-size: 1rem !important; }
+}
+
+/* 자바스크립트가 막힌 분께. 여기까지 오시는 일은 드물지만 빈 화면보다는 낫다. */
+.noscript {
+  position: relative; z-index: 5;
+  margin: 0; padding: 14px 18px;
+  background: rgba(245,197,66,0.12);
+  border-bottom: 1px solid rgba(245,197,66,0.3);
+  color: var(--gold-1);
+  font-family: var(--font-sub); font-size: 0.92rem; line-height: 1.6;
+  text-align: center;
+}
+
 /* ── 유사도 ───────────────────────────────────── */
 
 .simil-block { margin-top: 20px; padding-top: 18px; border-top: 1px dashed rgba(245,197,66,0.2); }

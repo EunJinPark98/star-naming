@@ -1105,9 +1105,10 @@
       if (o.gender !== "N" && x.g !== "N" && x.g !== o.gender) return false;
       if (o.mustChar && !x.n.includes(o.mustChar)) return false;
       if (!chosungMatchAll(x.n, o.chosung)) return false;
-      /* BLOCKED 는 글자를 짜맞추다 나온 뜻밖의 말을 거르려는 것이라,
-         통째로 손질해 담아 둔 이름에는 대지 않는다.
-         (은하수의 "하수"처럼 멀쩡한 이름이 애먼 데서 걸린다) */
+      /* BLOCKED 를 이름 자체에는 대지 않는다 — 통째로 손질해 담아 둔 것이라
+         은하수의 "하수"처럼 멀쩡한 이름이 애먼 데서 걸린다. 다만 성이 앞에
+         붙으며 새로 생기는 말은 거른다(노 + 예린). */
+      if (blockedAcross(o.surname, x.n)) return false;
       if (o.exclude.has(o.surname + x.n)) return false;
       return true;
     });
@@ -1179,6 +1180,24 @@
     const full = sur + given;
     for (const bad of BLOCKED) {
       if (given.includes(bad) || full.includes(bad)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * 성이 앞에 붙으면서 비로소 생기는 말인가.
+   *
+   * 통째로 손질해 담아 둔 한글 이름에는 BLOCKED 를 대지 않는다. 은하수의
+   * "하수"처럼 멀쩡한 이름이 애먼 데서 걸리기 때문이다. 그런데 그 판단은
+   * 이름 하나만 놓고 한 것이라, 성과 맞물려 새로 생기는 말은 못 걸렀다.
+   * 노 + 예린 = "노예린", 주 + 정우 = "주정우" 같은 것들이다.
+   * 그래서 이름 안에 본디 있던 말은 넘기고, 성을 붙여야 생기는 말만 거른다.
+   */
+  function blockedAcross(sur, given) {
+    if (!sur) return false;
+    const full = sur + given;
+    for (const bad of BLOCKED) {
+      if (full.includes(bad) && !given.includes(bad)) return true;
     }
     return false;
   }
@@ -1400,17 +1419,31 @@
     return false;
   }
 
-  /** 글자마다 "보배 진 珍" 처럼 뜻 · 음 · 한자를 늘어놓는다. */
-  function readingOf(slots, script) {
-    return slots
-      .map((s) => {
-        /* 뜻과 소리가 같으면("빛 빛") 한 번만 적는다 */
-        const known = s.hanja && s.hanja.m && s.hanja.m !== "뜻 모름" && s.hanja.m !== s.syl;
-        /* 한자를 쓰지 않는 표기를 골랐으면 한자는 보여 주지 않는다 */
-        const ch = !fromList(script) && s.hanja && s.hanja.c ? ' <i>' + s.hanja.c + "</i>" : "";
-        return '<span class="ch">' + (known ? s.hanja.m + " " : "") + s.syl + ch + "</span>";
-      })
-      .join("");
+  /**
+   * 글자마다 "보배 진 珍" 처럼 뜻 · 음 · 한자를 늘어놓는다.
+   *
+   * 글월을 이어 붙여 innerHTML 로 넣지 않고 마디를 하나씩 만들어 붙인다.
+   * 뜻은 사전에서만 오는 것이 아니라, 한자를 직접 적으실 때 손수 쓰신 글이
+   * 그대로 뜻이 된다("사랑할 지 忯"). 그 글에 꺾쇠가 섞여 있으면 글월을
+   * 이어 붙이는 방식에서는 화면이 망가진다.
+   */
+  function fillReading(el, slots, script) {
+    el.textContent = "";
+    for (const s of slots) {
+      const span = document.createElement("span");
+      span.className = "ch";
+      /* 뜻과 소리가 같으면("빛 빛") 한 번만 적는다 */
+      const known = s.hanja && s.hanja.m && s.hanja.m !== "뜻 모름" && s.hanja.m !== s.syl;
+      if (known) span.append(s.hanja.m + " ");
+      span.append(s.syl);
+      /* 한자를 쓰지 않는 표기를 골랐으면 한자는 보여 주지 않는다 */
+      if (!fromList(script) && s.hanja && s.hanja.c) {
+        const i = document.createElement("i");
+        i.textContent = s.hanja.c;
+        span.append(" ", i);
+      }
+      el.append(span);
+    }
   }
 
   /* ── 화면에 보여주기 ──────────────────────── */
@@ -1540,7 +1573,7 @@
     } else {
       $("modalTag").hidden = true;
       hanjaEl.textContent = result.slots.map((s) => s.hanja.c).join("");
-      charsEl.innerHTML = readingOf(result.slots, opts.script);
+      fillReading(charsEl, result.slots, opts.script);
       meaningEl.textContent = meaningOf(result.slots);
     }
 
@@ -1549,11 +1582,56 @@
     $("modalResult").hidden = false;
     $("modalExhausted").hidden = true;
     $("againBtn").disabled = false;
+    showModal();
+  }
+
+  /**
+   * 결과 창 열고 닫기.
+   *
+   * 이 창은 aria-modal 이라, 열려 있는 동안 화면 읽어 주는 프로그램에게는
+   * 창 바깥이 없는 것이 된다. 그런데 초점이 바깥(짓기 단추)에 남아 있으면
+   * 눈으로 못 보시는 분은 이름이 나왔는데도 그리 갈 길이 없다. 그래서 열 때
+   * 초점을 창 안으로 옮기고, 닫을 때 있던 자리로 돌려 놓는다.
+   */
+  let focusBefore = null;
+
+  function showModal() {
+    /* "다시 정하기"는 창을 숨겼다 다시 연다. 그 사이 초점이 숨은 단추나
+       body 로 떨어지는데, 그 자리를 적어 두면 닫을 때 엉뚱한 데로 돌아간다.
+       그래서 창 밖의 참한 자리일 때만 적어 둔다. */
+    const at = document.activeElement;
+    if (at && at !== document.body && !$("modal").contains(at)) focusBefore = at;
     $("modal").hidden = false;
+    const box = $("modal").querySelector(".modal__box");
+    if (box) box.focus();
   }
 
   function closeModal() {
     $("modal").hidden = true;
+    /* 돌려 놓을 자리가 사라졌거나 숨었으면 그냥 둔다 */
+    if (focusBefore && document.contains(focusBefore) && focusBefore.offsetParent !== null) {
+      focusBefore.focus();
+    }
+    focusBefore = null;
+  }
+
+  /** 창이 열려 있는 동안 탭이 창 밖으로 새 나가지 않게 */
+  function trapTab(e) {
+    if (e.key !== "Tab" || $("modal").hidden) return;
+    const box = $("modal").querySelector(".modal__box");
+    if (!box) return;
+    const able = [...box.querySelectorAll('button, [href], input, select, [tabindex]:not([tabindex="-1"])')]
+      .filter((el) => !el.disabled && el.offsetParent !== null);
+    if (!able.length) return;
+    const first = able[0];
+    const last = able[able.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   /** 더 지어 드릴 이름이 남지 않았을 때, 이름 없이 안내만 단독으로 보여 준다. */
@@ -1562,12 +1640,13 @@
     $("modalResult").hidden = true;
     $("modalExhausted").hidden = false;
     $("modalExhaustedText").textContent = msg;
-    $("modal").hidden = false;
+    showModal();
   }
 
   document.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeModal));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !$("modal").hidden) closeModal();
+    trapTab(e);
   });
 
   /* ── 토스트 ───────────────────────────────── */
