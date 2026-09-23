@@ -953,7 +953,7 @@
     return open.length ? open : all;
   };
 
-  /** 글자 정보. 한자 사전에 없으면 순우리말 글자 사전에서 찾는다. */
+  /** 글자 정보. 한자 사전에 없으면 PURE(뜻은 있고 한자 소리는 아닌 글자) 사전에서 찾는다. */
   const info = (syl) => SYL[syl] || PURE[syl] || null;
 
   /**
