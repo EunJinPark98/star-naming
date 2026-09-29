@@ -439,5 +439,17 @@
 
 <script src="data.js?v=20260923a"></script>
 <script src="app.js?v=20260923a"></script>
+<!-- 방문자 수 (Vercel Web Analytics). 쿠키를 쓰지 않는다.
+     진짜 주소에서만 센다 — 미리보기 배포나 로컬 점검은 숫자에 안 섞인다. -->
+<script>
+  (function () {
+    if (location.hostname !== "naming.byeolmamapapa.com") return;
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    var s = document.createElement("script");
+    s.defer = true;
+    s.src = "/_vercel/insights/script.js";
+    document.head.appendChild(s);
+  })();
+</script>
 </body>
 </html>
